@@ -8,8 +8,13 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL30;
 
 public class TextureManager {
 
@@ -78,11 +83,25 @@ public class TextureManager {
 		textures.clear();
 	}
 	
-	public static void interp(String tex, boolean interp){
+	public static void filterMipmap(String tex, boolean interp, boolean mipmap){
 		bindTexture(tex);
-		int filter = interp ? GL11.GL_LINEAR : GL11.GL_NEAREST;
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, filter);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, filter);
+		int nearFilter = GL11.GL_NEAREST;
+		int farFilter = GL11.GL_NEAREST;
+		if(mipmap){
+			GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+			if(GL.getCapabilities().GL_EXT_texture_filter_anisotropic){
+				float amount = Math.min(4F, GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+				GL11.glTexParameterf(GL11.GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, amount);
+			}
+		}
+		if(interp){
+			farFilter = mipmap ? GL11.GL_LINEAR_MIPMAP_LINEAR : GL11.GL_LINEAR;
+			nearFilter = GL11.GL_LINEAR;
+		} else {
+			farFilter = mipmap ? GL11.GL_LINEAR_MIPMAP_NEAREST : GL11.GL_NEAREST;
+		}
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, nearFilter);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, farFilter);
 		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_REPEAT);
 		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_REPEAT);
 	}

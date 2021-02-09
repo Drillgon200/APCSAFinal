@@ -19,6 +19,7 @@ public class Tessellator {
 	private int currentElement = 0;
 	private int vertexCount = 0;
 	public boolean isDrawing = false;
+	public float offsetX, offsetY, offsetZ;
 	
 	public void begin(int mode, VertexFormat format){
 		if(isDrawing){
@@ -31,8 +32,18 @@ public class Tessellator {
 		currentFormat.setState();
 	}
 	
+	public void setOffset(Vec3f offset) {
+		setOffset(offset.x, offset.y, offset.z);
+	}
+	
+	public void setOffset(float x, float y, float z){
+		this.offsetX = x;
+		this.offsetY = y;
+		this.offsetZ = z;
+	}
+	
 	public Tessellator pos(float x, float y, float z){
-		return generic(x, y, z);
+		return generic(x+offsetX, y+offsetY, z+offsetZ);
 	}
 	
 	public Tessellator tex(float x, float y){

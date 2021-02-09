@@ -6,6 +6,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL32;
 
 public class Framebuffer {
 
@@ -16,13 +17,15 @@ public class Framebuffer {
 	public int height;
 	public boolean usesDepth;
 	public boolean usesStencil;
+	public boolean multisample;
 	public float[] color = {0, 0, 0, 1};
 	
-	public Framebuffer(int width, int height, boolean depth, boolean stencil){
+	public Framebuffer(int width, int height, boolean depth, boolean stencil, boolean multisample){
 		this.width = width;
 		this.height = height;
 		usesDepth = depth;
 		usesStencil = stencil;
+		this.multisample = multisample;
 		setupFBO(width, height, depth, stencil);
 		checkFramebuffer();
 	}
@@ -30,7 +33,7 @@ public class Framebuffer {
 	public void checkFramebuffer() {
 		int test = GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
 		if(test != GL30.GL_FRAMEBUFFER_COMPLETE){
-			throw new RuntimeException("Failed to create framebuffer!");
+			throw new RuntimeException("Failed to create framebuffer! Code: " + test);
 		}
 	}
 
@@ -38,27 +41,44 @@ public class Framebuffer {
 		fbo = GL30.glGenFramebuffers();
 		bindFramebuffer(true);
 		fbo_tex = GL11.glGenTextures();
-		GL11.glBindTexture(GL11.GL_TEXTURE_2D, fbo_tex);
-		GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (IntBuffer)null);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-		GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, fbo_tex, 0);
-		if(depth){
-			depth_tex = GL11.glGenTextures();
-			GL11.glBindTexture(GL11.GL_TEXTURE_2D, depth_tex);
-			if(stencil){
-				GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_DEPTH24_STENCIL8, width, height, 0, GL30.GL_DEPTH_STENCIL, GL30.GL_UNSIGNED_INT_24_8, (IntBuffer)null);
-				GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_STENCIL_ATTACHMENT, GL11.GL_TEXTURE_2D, depth_tex, 0);
-			} else {
-				GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL14.GL_DEPTH_COMPONENT24, width, height, 0, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, (IntBuffer)null);
-				GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, depth_tex, 0);
+		if(multisample){
+			GL11.glBindTexture(GL32.GL_TEXTURE_2D_MULTISAMPLE, fbo_tex);
+			GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL11.GL_RGBA8, width, height, false);
+			GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL32.GL_TEXTURE_2D_MULTISAMPLE, fbo_tex, 0);
+			if(depth){
+				depth_tex = GL11.glGenTextures();
+				GL11.glBindTexture(GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex);
+				if(stencil){
+					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL30.GL_DEPTH24_STENCIL8, width, height, false);
+					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_STENCIL_ATTACHMENT, GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex, 0);
+				} else {
+					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL14.GL_DEPTH_COMPONENT24, width, height, false);
+					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex, 0);
+				}
 			}
+		} else {
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, fbo_tex);
+			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (IntBuffer)null);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+			GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, fbo_tex, 0);
+			if(depth){
+				depth_tex = GL11.glGenTextures();
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D, depth_tex);
+				if(stencil){
+					GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_DEPTH24_STENCIL8, width, height, 0, GL30.GL_DEPTH_STENCIL, GL30.GL_UNSIGNED_INT_24_8, (IntBuffer)null);
+					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_STENCIL_ATTACHMENT, GL11.GL_TEXTURE_2D, depth_tex, 0);
+				} else {
+					GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL14.GL_DEPTH_COMPONENT24, width, height, 0, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, (IntBuffer)null);
+					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D, depth_tex, 0);
+				}
+				GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+				GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+				GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+				GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+			}
 		}
 	}
 	

@@ -6,4 +6,6 @@ public class MainConfig {
 	public static final float TICKLENGTH = 1000F/(float)TICKRATE;
 	public static final float TICKRATE_RCP = 1F/(float)TICKRATE;
 	public static final float GRAVITY = 9.81F;
+	
+	public static final int mipmapLevels = 4;
 }

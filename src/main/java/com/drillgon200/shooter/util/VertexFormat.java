@@ -9,6 +9,7 @@ public class VertexFormat {
 	public static final Element TEX_2F = new Element(GL11.GL_FLOAT, 2, false, 8);
 	
 	public static final VertexFormat POSITION_TEX = new VertexFormat(POS_3F, TEX_2F);
+	public static final VertexFormat POSITION = new VertexFormat(POS_3F);
 	
 	public Element[] elements;
 	public int bytes_per_vertex;

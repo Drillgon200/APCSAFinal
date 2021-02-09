@@ -9,16 +9,22 @@ import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 
-import com.drillgon200.shooter.Keybindings.Keybinding;
+import com.drillgon200.physics.AxisAlignedBB;
+import com.drillgon200.physics.Contact;
+import com.drillgon200.physics.ConvexMeshCollider;
 import com.drillgon200.shooter.entity.Player;
 import com.drillgon200.shooter.util.Framebuffer;
 import com.drillgon200.shooter.util.MathHelper;
 import com.drillgon200.shooter.util.Project;
+import com.drillgon200.shooter.util.RenderHelper;
 import com.drillgon200.shooter.util.ShaderManager;
 import com.drillgon200.shooter.util.Tessellator;
 import com.drillgon200.shooter.util.TextureManager;
+import com.drillgon200.shooter.util.Triangle;
 import com.drillgon200.shooter.util.Vec3f;
 import com.drillgon200.shooter.util.VertexFormat;
 
@@ -30,6 +36,7 @@ public class Shooter {
 	public static int windowPosX = 0;
 	public static int windowPosY = 0;
 	public static Framebuffer framebuffer;
+	public static Framebuffer postFramebuffer;
 	public static boolean mouseGrabbed = false;
 	public static long lastTickTime = -1;
 	public static float partialTicks = 0;
@@ -109,7 +116,7 @@ public class Shooter {
 		
 		world = new World();
 		
-		player = new Player(world, 0, 0, 0);
+		player = new Player(world, 0, 4, 0);
 		world.addEntity(player);
 	}
 	
@@ -129,16 +136,19 @@ public class Shooter {
 	
 	private static void recreateFramebuffer(){
 		if(framebuffer == null){
-			framebuffer = new Framebuffer(displayWidth, displayHeight, true, false);
+			framebuffer = new Framebuffer(displayWidth, displayHeight, true, false, true);
+			postFramebuffer = new Framebuffer(displayWidth, displayHeight, true, false, false);
 		} else if(framebuffer.width != displayWidth || framebuffer.height != displayHeight){
 			framebuffer.deleteFBO();
-			framebuffer = new Framebuffer(displayWidth, displayHeight, true, false);
+			framebuffer = new Framebuffer(displayWidth, displayHeight, true, false, true);
+			postFramebuffer.deleteFBO();
+			postFramebuffer = new Framebuffer(displayWidth, displayHeight, true, false, false);
 		}
 	}
 	
 	//public static float duckCount = 1;
 	
-	public static void renderLoop(){
+	public static void renderLoop() throws Exception{
 		lastTickTime = System.currentTimeMillis();
 		while(!GLFW.glfwWindowShouldClose(window)){
 			updateDisplayInfo();
@@ -153,9 +163,15 @@ public class Shooter {
 			partialTicks = ticksPassed-ticks;
 			for(int i = 0; i < Math.min(10, ticks); i ++){
 				lastTickTime = time;
-				clientTick();
+				try {
+					clientTick();
+				} catch(Exception x){
+					x.printStackTrace();
+					throw new Exception("Exception in main tick loop", x);
+				}
 			}
 			recreateFramebuffer();
+			GL11.glEnable(GL32.GL_MULTISAMPLE);
 			framebuffer.bindFramebuffer(true);
 			framebuffer.clear();
 			//render
@@ -185,8 +201,12 @@ public class Shooter {
 			renderWorld();
 			
 			framebuffer.unbindFramebuffer();
+			GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, framebuffer.fbo);
+			GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, postFramebuffer.fbo);
+			GL30.glBlitFramebuffer(0, 0, displayWidth, displayHeight, 0, 0, displayWidth, displayHeight, GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+			GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
 			Resources.blit.use();
-			framebuffer.blit();
+			postFramebuffer.blit();
 			ShaderManager.releaseShader();
 			
 			checkGLError();
@@ -198,7 +218,7 @@ public class Shooter {
 	private static void setupView(){
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
 		GL11.glLoadIdentity();
-		Project.gluPerspective(70, (float)displayWidth/(float)displayHeight, 0.05F, 100);
+		Project.gluPerspective(70, (float)displayWidth/(float)displayHeight, 0.05F, 1000);
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 		GL11.glLoadIdentity();
 		GL11.glRotated(player.rotationPitch, 1, 0, 0);
@@ -213,15 +233,20 @@ public class Shooter {
 		GL11.glEnable(GL11.GL_DEPTH_TEST);
 		GL11.glEnable(GL11.GL_ALPHA_TEST);
 		GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+		GL11.glEnable(GL11.GL_CULL_FACE);
+		GL11.glCullFace(GL11.GL_BACK);
 		GL11.glPushMatrix();
 		Tessellator tes = Tessellator.instance;
 		Resources.world.use();
 		TextureManager.bindTexture(Resources.cc0_gravel);
 		tes.begin(GL11.GL_QUADS, VertexFormat.POSITION_TEX);
-		tes.pos(-10, 0, -10).tex(0, 0).endVertex();
-		tes.pos(10, 0, -10).tex(1, 0).endVertex();
-		tes.pos(10, 0, 10).tex(1, 1).endVertex();
-		tes.pos(-10, 0, 10).tex(0, 1).endVertex();
+		for(int i = 0; i < 15; i ++){
+			float offset = 20*i;
+			tes.pos(-10, 0, 10+offset).tex(0, 1).endVertex();
+			tes.pos(10, 0, 10+offset).tex(1, 1).endVertex();
+			tes.pos(10, 0, -10+offset).tex(1, 0).endVertex();
+			tes.pos(-10, 0, -10+offset).tex(0, 0).endVertex();
+		}
 		tes.draw();
 		TextureManager.bindTexture(Resources.duck_test);
 		GL11.glEnable(GL11.GL_BLEND);
@@ -233,6 +258,10 @@ public class Shooter {
 		tes.pos(1, 3, -1).tex(0, 1).endVertex();
 		tes.draw();
 		GL11.glDisable(GL11.GL_BLEND);
+		
+		Resources.red.use();
+		player.body.renderDebugInfo(new Vec3f(0, 0, 0), partialTicks);
+		
 		ShaderManager.releaseShader();
 		GL11.glPopMatrix();
 	}
@@ -256,6 +285,8 @@ public class Shooter {
 				player.lookVec = new Vec3f((float)Math.toRadians(-player.rotationYaw-90), (float)Math.toRadians(player.rotationPitch+180));
 				player.rightVec = new Vec3f((float)Math.toRadians(-player.rotationYaw), 0);
 				player.leftVec = player.rightVec.negate();
+				player.forwardVec = new Vec3f((float)Math.toRadians(-player.rotationYaw+90), 0);
+				player.backVec = player.forwardVec.negate();
 				
 				GLFW.glfwSetCursorPos(window, centerX, centerY);
 			}
@@ -271,23 +302,39 @@ public class Shooter {
 	
 	private static void clientTick(){
 		Keybindings.updateBindings();
+		float maxWalk = 12;
+		float mult = 8;
+		if(Keybindings.sneak.isDown){
+			maxWalk *= 0.25F;
+		}
+		if(!player.isOnGround){
+			mult = 0.5F;
+		}
+		if(Keybindings.jump.isDown && player.isOnGround){
+			player.motionY += 8;
+			mult *= 1.5F;
+			maxWalk *= 20;
+		}
 		if(Keybindings.forward.isDown){
-			player.addVelocity(player.lookVec.scale(0.1F));
+			float amount = MathHelper.clamp(maxWalk-player.getVelocity().dot(player.forwardVec), 0, 1);
+			player.addVelocity(player.forwardVec.scale(amount*mult));
 		}
 		if(Keybindings.back.isDown){
-			player.addVelocity(player.lookVec.scale(-0.1F));
+			float amount = MathHelper.clamp(maxWalk-player.getVelocity().dot(player.backVec), 0, 1);
+			player.addVelocity(player.backVec.scale(amount*mult));
 		}
 		if(Keybindings.right.isDown){
-			player.addVelocity(player.rightVec.scale(0.1F));
+			float amount = MathHelper.clamp(maxWalk-player.getVelocity().dot(player.rightVec), 0, 1);
+			player.addVelocity(player.rightVec.scale(amount*mult*0.6F));
 		}
 		if(Keybindings.left.isDown){
-			player.addVelocity(player.leftVec.scale(0.1F));
+			float amount = MathHelper.clamp(maxWalk-player.getVelocity().dot(player.leftVec), 0, 1);
+			player.addVelocity(player.leftVec.scale(amount*mult*0.6F));
 		}
-		if(Keybindings.jump.isDown){
-			player.motionY += 0.1;
-		}
-		if(Keybindings.sneak.isDown){
-			player.motionY -= 0.1;
+		if(player.isOnGround){
+			player.body.linearDrag = 0.9999F;
+		} else {
+			player.body.linearDrag = 0.1F;
 		}
 		world.updateEntities();
 	}

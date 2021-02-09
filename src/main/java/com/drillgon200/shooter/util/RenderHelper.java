@@ -2,6 +2,8 @@ package com.drillgon200.shooter.util;
 
 import org.lwjgl.opengl.GL11;
 
+import com.drillgon200.physics.AxisAlignedBB;
+
 public class RenderHelper {
 
 	public static void drawFullscreenTriangle(){
@@ -21,4 +23,91 @@ public class RenderHelper {
         GL11.glColorMask(true, true, true, true);
 	}
 	
+	public static void drawBoundingBox(AxisAlignedBB box){
+        drawBoundingBox(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ);
+    }
+
+    public static void drawBoundingBox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ){
+        Tessellator.instance.begin(GL11.GL_LINE_STRIP, VertexFormat.POSITION);
+        drawBoundingBox2(minX, minY, minZ, maxX, maxY, maxZ);
+        Tessellator.instance.draw();
+    }
+
+    public static void drawBoundingBox2(float minX, float minY, float minZ, float maxX, float maxY, float maxZ){
+        Tessellator.instance.pos(minX, minY, minZ).endVertex();
+        Tessellator.instance.pos(minX, minY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, minY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, minY, maxZ).endVertex();
+        Tessellator.instance.pos(minX, minY, maxZ).endVertex();
+        Tessellator.instance.pos(minX, minY, minZ).endVertex();
+        Tessellator.instance.pos(minX, maxY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, maxY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, maxY, maxZ).endVertex();
+        Tessellator.instance.pos(minX, maxY, maxZ).endVertex();
+        Tessellator.instance.pos(minX, maxY, minZ).endVertex();
+        Tessellator.instance.pos(minX, maxY, maxZ).endVertex();
+        Tessellator.instance.pos(minX, minY, maxZ).endVertex();
+        Tessellator.instance.pos(maxX, maxY, maxZ).endVertex();
+        Tessellator.instance.pos(maxX, minY, maxZ).endVertex();
+        Tessellator.instance.pos(maxX, maxY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, minY, minZ).endVertex();
+        Tessellator.instance.pos(maxX, minY, minZ).endVertex();
+    }
+    
+    public static void drawCapsule(Vec3f offset, float height, float radius, float numSegments){
+		float circle = 2*(float)Math.PI;
+		float semicircle = (float)Math.PI;
+		float circleStep = circle/numSegments;
+		Tessellator.instance.setOffset(offset);
+		Tessellator.instance.begin(GL11.GL_LINE_STRIP, VertexFormat.POSITION);
+		Vec3f vec = new Vec3f(0, 0, radius);
+		//Top cylinder circle
+		for(float i = 0; i < circle; i+=circleStep){
+			Vec3f pos = vec.rotateY(i);
+			Tessellator.instance.pos(pos.x, pos.y+height*0.5F, pos.z).endVertex();
+		}
+		//Z plane top semicircle
+		for(float i = 0; i <= semicircle; i += circleStep){
+			Vec3f pos = vec.rotateX(i);
+			Tessellator.instance.pos(pos.x, pos.y+height*0.5F, pos.z).endVertex();
+		}
+		vec = new Vec3f(0, 0, -radius);
+		//Bottom Z plane quarter circle before big loop
+		for(float i = 0; i < semicircle*0.5F; i += circleStep){
+			Vec3f pos = vec.rotateX(i);
+			Tessellator.instance.pos(pos.x, pos.y-height*0.5F, pos.z).endVertex();
+		}
+		//Do big X plane loop
+		vec = new Vec3f(0, -radius, 0);
+		for(float i = 0; i <= semicircle*0.5F; i += circleStep){
+			Vec3f pos = vec.rotateZ(i);
+			Tessellator.instance.pos(pos.x, pos.y-height*0.5F, pos.z).endVertex();
+		}
+		vec = new Vec3f(-radius, 0, 0);
+		for(float i = 0; i <= semicircle; i += circleStep){
+			Vec3f pos = vec.rotateZ(i);
+			Tessellator.instance.pos(pos.x, pos.y+height*0.5F, pos.z).endVertex();
+		}
+		vec = new Vec3f(radius, 0, 0);
+		for(float i = 0; i < semicircle*0.5F; i += circleStep){
+			Vec3f pos = vec.rotateZ(i);
+			Tessellator.instance.pos(pos.x, pos.y-height*0.5F, pos.z).endVertex();
+		}
+		vec = new Vec3f(0, -radius, 0);
+		//Big X plane loop completed, finish other X plane bottom quarter circle
+		for(float i = 0; i < semicircle*0.5F; i += circleStep){
+			Vec3f pos = vec.rotateX(i);
+			Tessellator.instance.pos(pos.x, pos.y-height*0.5F, pos.z).endVertex();
+		}
+		vec = new Vec3f(0, 0, radius);
+		//Bottom cylinder circle
+		for(float i = 0; i <= circle; i+=circleStep){
+			Vec3f pos = vec.rotateY(i);
+			Tessellator.instance.pos(pos.x, pos.y-height*0.5F, pos.z).endVertex();
+		}
+		//Last connecting vertex back to start
+		Tessellator.instance.pos(0, height*0.5F, radius).endVertex();
+		Tessellator.instance.draw();
+		Tessellator.instance.setOffset(0, 0, 0);
+    }
 }

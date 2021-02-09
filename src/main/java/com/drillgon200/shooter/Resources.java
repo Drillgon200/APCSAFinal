@@ -11,18 +11,24 @@ public class Resources {
 	
 	public static String cc0_gravel = "/assets/shooter/textures/cc0/gravel.png";
 	
+	public static String crosshair0 = "/assets/shooter/textures/hud/crosshair0.png";
+	
 	//Shaders
 	public static Shader blit;
 	public static Shader world;
+	public static Shader red;
 	
 	public static void reload(){
 		TextureManager.loadTexture(duck_test);
-		TextureManager.interp(duck_test, true);
+		TextureManager.filterMipmap(duck_test, true, true);
 		TextureManager.loadTexture(cc0_gravel);
-		TextureManager.interp(cc0_gravel, true);
+		TextureManager.filterMipmap(cc0_gravel, true, true);
+		TextureManager.loadTexture(crosshair0);
+		TextureManager.filterMipmap(crosshair0, false, false);
 		
 		blit = ShaderManager.loadShader("/assets/shooter/shaders/blit");
 		world = ShaderManager.loadShader("/assets/shooter/shaders/world");
+		red = ShaderManager.loadShader("/assets/shooter/shaders/red");
 	}
 	
 	public static void delete(){
