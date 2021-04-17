@@ -21,8 +21,8 @@ public class Keybindings {
 		back = registerBinding(new Keybinding("move_back", GLFW.GLFW_KEY_S));
 		left = registerBinding(new Keybinding("move_left", GLFW.GLFW_KEY_A));
 		right = registerBinding(new Keybinding("move_right", GLFW.GLFW_KEY_D));
-		jump = registerBinding(new Keybinding("move_right", GLFW.GLFW_KEY_SPACE));
-		sneak = registerBinding(new Keybinding("move_right", GLFW.GLFW_KEY_LEFT_SHIFT));
+		jump = registerBinding(new Keybinding("move_jump", GLFW.GLFW_KEY_SPACE));
+		sneak = registerBinding(new Keybinding("move_sneak", GLFW.GLFW_KEY_LEFT_SHIFT));
 	}
 	
 	public static Keybinding registerBinding(Keybinding k){

@@ -88,7 +88,7 @@ public class Quat4f {
 	 * @param q1
 	 *            the other quaternion
 	 */
-	public final void mul(Quat4f q1) {
+	public final Quat4f mul(Quat4f q1) {
 		float x, y, w;
 
 		w = this.w * q1.w - this.x * q1.x - this.y * q1.y - this.z * q1.z;
@@ -98,6 +98,8 @@ public class Quat4f {
 		this.w = w;
 		this.x = x;
 		this.y = y;
+		
+		return this;
 	}
 
 	/**
@@ -209,16 +211,19 @@ public class Quat4f {
 		}
 	}
 
-	public void setFromMat(Matrix3f mat) {
-		setFromMat(this, mat);
+	public Quat4f setFromMat(Matrix3f mat) {
+		return setFromMat(this, mat);
+	}
+	
+	public Quat4f setFromMat(float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22){
+		return setFromMat(this, m00, m01, m02, m10, m11, m12, m20, m21, m22);
 	}
 
-	public static void setFromMat(Quat4f q, Matrix3f mat) {
-		setFromMat(q, mat.m00, mat.m01, mat.m02, mat.m10, mat.m11, mat.m12, mat.m20, mat.m21, mat.m22);
+	public static Quat4f setFromMat(Quat4f q, Matrix3f mat) {
+		return setFromMat(q, mat.m00, mat.m01, mat.m02, mat.m10, mat.m11, mat.m12, mat.m20, mat.m21, mat.m22);
 	}
 
-	public static void setFromMat(Quat4f q, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
-
+	public static Quat4f setFromMat(Quat4f q, float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
 		float s;
 		float tr = m00 + m11 + m22;
 		if(tr >= 0.0) {
@@ -253,6 +258,8 @@ public class Quat4f {
 				q.w = (m10 - m01) * s;
 			}
 		}
+		
+		return q;
 	}
 
 	/**
@@ -264,7 +271,7 @@ public class Quat4f {
 	 * @param alpha
 	 *            the alpha interpolation parameter
 	 */
-	public final void interpolate(Quat4f q1, float alpha) {
+	public final Quat4f interpolate(Quat4f q1, float alpha) {
 		// From "Advanced Animation and Rendering Techniques"
 		// by Watt and Watt pg. 364, function as implemented appeared to be 
 		// incorrect.  Fails to choose the same quaternion for the double
@@ -299,6 +306,7 @@ public class Quat4f {
 		x = (float) (s1 * x + s2 * q1.x);
 		y = (float) (s1 * y + s2 * q1.y);
 		z = (float) (s1 * z + s2 * q1.z);
+		return this;
 	}
 
 	public Matrix3f matrixFromQuat() {
@@ -306,18 +314,57 @@ public class Quat4f {
 	}
 
 	public Matrix3f matrixFromQuat(Matrix3f m) {
-		m.m00 = 1 - 2 * y * y - 2 * z * z;
-		m.m01 = 2 * x * y - 2 * z * w;
-		m.m02 = 2 * x * z + 2 * y * w;
+		float xx = 2*x*x;
+		float yy = 2*y*y;
+		float zz = 2*z*z;
+		float xy = 2*x*y;
+		float xz = 2*x*z;
+		float xw = 2*x*w;
+		float yz = 2*y*z;
+		float yw = 2*y*w;
+		float zw = 2*z*w;
+		m.m00 = 1 - yy - zz;
+		m.m01 = xy - zw;
+		m.m02 = xz + yw;
 
-		m.m10 = 2 * x * y + 2 * z * w;
-		m.m11 = 1 - 2 * x * x - 2 * z * z;
-		m.m12 = 2 * y * z - 2 * x * w;
+		m.m10 = xy + zw;
+		m.m11 = 1 - xx - zz;
+		m.m12 = yz - xw;
 
-		m.m20 = 2 * x * z - 2 * y * w;
-		m.m21 = 2 * y * z + 2 * x * w;
-		m.m22 = 1 - 2 * x * x - 2 * y * y;
+		m.m20 = xz - yw;
+		m.m21 = yz + xw;
+		m.m22 = 1 - xx - yy;
 
 		return m;
+	}
+	
+	public Matrix4f matrixFromQuat(Matrix4f m) {
+		float xx = 2*x*x;
+		float yy = 2*y*y;
+		float zz = 2*z*z;
+		float xy = 2*x*y;
+		float xz = 2*x*z;
+		float xw = 2*x*w;
+		float yz = 2*y*z;
+		float yw = 2*y*w;
+		float zw = 2*z*w;
+		m.m00 = 1 - yy - zz;
+		m.m01 = xy - zw;
+		m.m02 = xz + yw;
+
+		m.m10 = xy + zw;
+		m.m11 = 1 - xx - zz;
+		m.m12 = yz - xw;
+
+		m.m20 = xz - yw;
+		m.m21 = yz + xw;
+		m.m22 = 1 - xx - yy;
+
+		return m;
+	}
+	
+	@Override
+	public String toString() {
+		return "Quat4f: " + x + " " + y + " " + z + " " + w;
 	}
 }

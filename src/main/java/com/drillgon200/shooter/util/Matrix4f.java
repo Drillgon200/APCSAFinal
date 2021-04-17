@@ -1,11 +1,18 @@
 package com.drillgon200.shooter.util;
 
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
 public class Matrix4f {
 	//Mostly copied from lwjgl 2's Matrix4f class, since apparently lwjgl 3 no longer comes with matrices and vectors and I need those.
 
+	public static final int BYTES_PER_MATRIX = 16*4;
+	
 	public float m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33;
+	
+	public Matrix4f() {
+		zero();
+	}
 	
 	public Matrix4f load(FloatBuffer buf) {
 
@@ -46,6 +53,98 @@ public class Matrix4f {
 		buf.put(m31);
 		buf.put(m32);
 		buf.put(m33);
+	}
+	
+	public void store(ByteBuffer buf){
+		buf.putFloat(m00);
+		buf.putFloat(m01);
+		buf.putFloat(m02);
+		buf.putFloat(m03);
+		buf.putFloat(m10);
+		buf.putFloat(m11);
+		buf.putFloat(m12);
+		buf.putFloat(m13);
+		buf.putFloat(m20);
+		buf.putFloat(m21);
+		buf.putFloat(m22);
+		buf.putFloat(m23);
+		buf.putFloat(m30);
+		buf.putFloat(m31);
+		buf.putFloat(m32);
+		buf.putFloat(m33);
+	}
+	
+	public Matrix4f set(Matrix3f other){
+		this.m00 = other.m00;
+		this.m01 = other.m01;
+		this.m02 = other.m02;
+		this.m10 = other.m10;
+		this.m11 = other.m11;
+		this.m12 = other.m12;
+		this.m20 = other.m20;
+		this.m21 = other.m21;
+		this.m22 = other.m22;
+		return this;
+	}
+	
+	public Matrix4f set(Matrix4f other){
+		this.m00 = other.m00;
+		this.m01 = other.m01;
+		this.m02 = other.m02;
+		this.m03 = other.m03;
+		this.m10 = other.m10;
+		this.m11 = other.m11;
+		this.m12 = other.m12;
+		this.m13 = other.m13;
+		this.m20 = other.m20;
+		this.m21 = other.m21;
+		this.m22 = other.m22;
+		this.m23 = other.m23;
+		this.m30 = other.m30;
+		this.m31 = other.m31;
+		this.m32 = other.m32;
+		this.m33 = other.m33;
+		return this;
+	}
+	
+	public Matrix4f zero(){
+		m00 = 0;
+		m01 = 0;
+		m02 = 0;
+		m03 = 0;
+		m10 = 0;
+		m11 = 0;
+		m12 = 0;
+		m13 = 0;
+		m20 = 0;
+		m21 = 0;
+		m22 = 0;
+		m23 = 0;
+		m30 = 0;
+		m31 = 0;
+		m32 = 0;
+		m33 = 0;
+		return this;
+	}
+	
+	public Matrix4f identity(){
+		m00 = 1;
+		m01 = 0;
+		m02 = 0;
+		m03 = 0;
+		m10 = 0;
+		m11 = 1;
+		m12 = 0;
+		m13 = 0;
+		m20 = 0;
+		m21 = 0;
+		m22 = 1;
+		m23 = 0;
+		m30 = 0;
+		m31 = 0;
+		m32 = 0;
+		m33 = 1;
+		return this;
 	}
 	
 	public static Matrix4f mul(Matrix4f left, Matrix4f right, Matrix4f dest) {
@@ -298,4 +397,37 @@ public class Matrix4f {
 		} else
 			return null;
 	}
+	
+	public Matrix3f toMat3(){
+		return new Matrix3f(m00, m01, m02, m10, m11, m12, m20, m21, m22);
+	}
+	
+	public Vec3f getTranslation() {
+		return new Vec3f(m30, m31, m32);
+	}
+	
+	public void setTranslation(Vec3f v) {
+		setTranslation(v.x, v.y, v.z);
+	}
+	
+	public void setTranslation(float i, float j, float k) {
+		m30 = i;
+		m31 = j;
+		m32 = k;
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder buf = new StringBuilder();
+		buf.append(m00).append(' ').append(m10).append(' ').append(m20).append(' ').append(m30).append('\n');
+		buf.append(m01).append(' ').append(m11).append(' ').append(m21).append(' ').append(m31).append('\n');
+		buf.append(m02).append(' ').append(m12).append(' ').append(m22).append(' ').append(m32).append('\n');
+		buf.append(m03).append(' ').append(m13).append(' ').append(m23).append(' ').append(m33).append('\n');
+		return buf.toString();
+	}
+	
+	public Matrix4f copy(){
+		return new Matrix4f().set(this);
+	}
+
 }

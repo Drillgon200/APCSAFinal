@@ -1,9 +1,13 @@
 package com.drillgon200.physics;
 
+import com.drillgon200.shooter.util.MathHelper;
+import com.drillgon200.shooter.util.Matrix3f;
 import com.drillgon200.shooter.util.Vec3f;
 
 public class AxisAlignedBB {
 
+	public static final AxisAlignedBB MAX_EXTENT_AABB = new AxisAlignedBB(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
+	
 	public float minX;
 	public float maxX;
 	public float minY;
@@ -42,6 +46,18 @@ public class AxisAlignedBB {
 		return other.maxX > this.minX && other.minX < this.maxX &&
 				other.maxY > this.minY && other.minY < this.maxY &&
 				other.maxZ > this.minZ && other.minZ < this.maxZ;
+	}
+	
+	public boolean intersectsSphere(Vec3f pos, float rad){
+		return intersectsSphereSq(pos, rad*rad);
+	}
+	
+	public boolean intersectsSphereSq(Vec3f pos, float radSq){
+		float x = MathHelper.clamp(pos.x, minX, maxX) - pos.x;
+		float y = MathHelper.clamp(pos.y, minY, maxY) - pos.y;
+		float z = MathHelper.clamp(pos.z, minZ, maxZ) - pos.z;
+		
+		return x*x + y*y + z*z <= radSq;
 	}
 	
 	public AxisAlignedBB union(AxisAlignedBB other){
@@ -203,5 +219,57 @@ public class AxisAlignedBB {
 	}
 	public AxisAlignedBB offset(Vec3f pos) {
 		return offset(pos.x, pos.y, pos.z);
+	}
+	
+	public AxisAlignedBB rotate(Matrix3f mat){
+		Vec3f[] points = new Vec3f[8];
+		points[0] = mat.transform(new Vec3f(minX, minY, minZ));
+		points[1] = mat.transform(new Vec3f(maxX, minY, minZ));
+		points[2] = mat.transform(new Vec3f(minX, maxY, minZ));
+		points[3] = mat.transform(new Vec3f(maxX, maxY, minZ));
+		points[4] = mat.transform(new Vec3f(minX, minY, maxZ));
+		points[5] = mat.transform(new Vec3f(maxX, minY, maxZ));
+		points[6] = mat.transform(new Vec3f(minX, maxY, maxZ));
+		points[7] = mat.transform(new Vec3f(maxX, maxY, maxZ));
+		
+		Vec3f min = new Vec3f(Float.MAX_VALUE);
+		Vec3f max = new Vec3f(-Float.MAX_VALUE);
+		
+		for(Vec3f point : points){
+			min.x = Math.min(min.x, point.x);
+			min.y = Math.min(min.y, point.y);
+			min.z = Math.min(min.z, point.z);
+			max.x = Math.max(max.x, point.x);
+			max.y = Math.max(max.y, point.y);
+			max.z = Math.max(max.z, point.z);
+		}
+		
+		return new AxisAlignedBB(min, max);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(!(obj instanceof AxisAlignedBB)){
+			return false;
+		}
+		AxisAlignedBB bb = (AxisAlignedBB)obj;
+		return bb.minX == minX && bb.minY == minY && bb.minZ == minZ && bb.maxX == maxX && bb.maxY == maxY && bb.maxZ == maxZ;
+	}
+	
+	@Override
+	public int hashCode() {
+		int result = 17;
+		result = 31*result + Float.floatToIntBits(minX);
+		result = 31*result + Float.floatToIntBits(minY);
+		result = 31*result + Float.floatToIntBits(minZ);
+		result = 31*result + Float.floatToIntBits(maxX);
+		result = 31*result + Float.floatToIntBits(maxY);
+		result = 31*result + Float.floatToIntBits(maxZ);
+        return result;
+	}
+	
+	@Override
+	public String toString() {
+		return "AxisAlignedBB from [" + minX + " " + minY + " " + minZ +"] to [" + " " + maxX + " " + maxY + " " + maxZ + "]";
 	}
 }

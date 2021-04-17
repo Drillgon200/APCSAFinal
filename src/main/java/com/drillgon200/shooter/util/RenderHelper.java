@@ -6,6 +6,17 @@ import com.drillgon200.physics.AxisAlignedBB;
 
 public class RenderHelper {
 
+	public static void drawGuiRect(float x, float y, float width, float height, float u, float v, float uMax, float vMax){
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.begin(GL11.GL_QUADS, VertexFormat.POSITION_TEX);
+        tessellator.pos(x, y, 0.0F).tex(u, v).endVertex();
+        tessellator.pos(x + width, y, 0.0F).tex(uMax, v).endVertex();
+        tessellator.pos(x + width, y + height, 0.0F).tex(uMax, vMax).endVertex();
+        tessellator.pos(x, y + height, 0.0F).tex(u, vMax).endVertex();
+        
+        tessellator.draw();
+	}
+	
 	public static void drawFullscreenTriangle(){
 		GL11.glColorMask(true, true, true, false);
         GL11.glDisable(GL11.GL_DEPTH_TEST);

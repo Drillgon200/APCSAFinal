@@ -12,6 +12,7 @@ public class GJK {
 	public static final int epaMaxIterations = 128;
 	
 	public static Simplex csoSimplex = new Simplex();
+	public static float margin = 0;
 	
 	//https://www.youtube.com/watch?v=Qupqu1xe7Io
 	public static GJKInfo colliding(RigidBody bodyA, RigidBody bodyB, Collider a, Collider b){
@@ -35,6 +36,7 @@ public class GJK {
 					return null;
 				return returnInfo;
 			}
+			float mask = 1000;
 			switch(csoSimplex.size){
 			case 0:
 			case 1:
@@ -56,14 +58,35 @@ public class GJK {
 				Vec3f ac = csoSimplex.points[2].v.subtract(csoSimplex.points[0].v);
 				Vec3f abc = ab.cross(ac);
 				ao = csoSimplex.points[0].v.negate();
+				if(iter > mask){
+					System.out.println("tri:");
+					System.out.println(direction);
+					System.out.println(csoSimplex.points[0].v);
+					System.out.println(csoSimplex.points[1].v);
+					System.out.println(csoSimplex.points[2].v);
+				}
 				direction = triangleCase(ab, ac, abc, ao);
+				if(iter > mask){
+					System.out.println(direction);
+				}
 				break;
 			case 4:
 				ab = csoSimplex.points[1].v.subtract(csoSimplex.points[0].v);
 				ac = csoSimplex.points[2].v.subtract(csoSimplex.points[0].v);
 				Vec3f ad = csoSimplex.points[3].v.subtract(csoSimplex.points[0].v);
 				ao = csoSimplex.points[0].v.negate();
+				if(iter > mask){
+					System.out.println("quad: ");
+					System.out.println(direction);
+					System.out.println(csoSimplex.points[0].v);
+					System.out.println(csoSimplex.points[1].v);
+					System.out.println(csoSimplex.points[2].v);
+					System.out.println(csoSimplex.points[3].v);
+				}
 				Vec3f dir = tetraCase(ab, ac, ad, ao);
+				if(iter > mask){
+					System.out.println(dir);
+				}
 				if(dir == null){
 					if(epa)
 						EPA(bodyA, bodyB, a, b, returnInfo);
@@ -132,15 +155,17 @@ public class GJK {
 			csoSimplex.size--;
 			return triangleCase(ab, ac, ab.cross(ac), ao);
 		} else if(ac.cross(ad).dot(ao) > 0){
+			//Winding order doesn't actually matter here since I'm pretty sure GJK sorts that out in triangleCase and
+			//EPA sorts it out when adding a face.
+			//Never mind, it definitely did matter
 			csoSimplex.points[1] = csoSimplex.points[2];
 			csoSimplex.points[2] = csoSimplex.points[3];
 			csoSimplex.points[3] = null;
 			csoSimplex.size--;
 			return triangleCase(ac, ad, ac.cross(ad), ao);
 		} else if(ad.cross(ab).dot(ao) > 0){
-			Mkv tmp = csoSimplex.points[1];
+			csoSimplex.points[2] = csoSimplex.points[1];
 			csoSimplex.points[1] = csoSimplex.points[3];
-			csoSimplex.points[2] = tmp;
 			csoSimplex.points[3] = null;
 			csoSimplex.size--;
 			return triangleCase(ad, ab, ad.cross(ab), ao);
@@ -179,8 +204,16 @@ public class GJK {
 	public static Vec3f localSupport(RigidBody body, Collider c, Vec3f worldDir){
 		if(body != null){
 			Vec3f localDir = body.globalToLocalVec(worldDir);
+			if(margin != 0){
+				localDir = localDir.normalize();
+				return body.localToGlobalPos(c.support(localDir).add(localDir.mutateScale(margin)));
+			}
 			return body.localToGlobalPos(c.support(localDir));
 		} else {
+			if(margin != 0){
+				worldDir = worldDir.normalize();
+				return c.support(worldDir).add(worldDir.mutateScale(margin));
+			}
 			return c.support(worldDir);
 		}
 	}
@@ -210,10 +243,11 @@ public class GJK {
 			Mkv support = doCSOSupport(bodyA, bodyB, a, b, closestFace[3].v);
 			final float epsilon = 0.0001F;
 			double dist = distToPlaneSq(closestFace, support.v);
+			//System.out.println(iter + " " + dist);
 			if(dist < epsilon){
 				info.result = Result.COLLIDING;
 				Vec3f separation = planeProjectOrigin(closestFace);
-				info.normal = separation.normalize();
+				info.normal = closestFace[3].v;
 				info.depth = (float) separation.len();
 				for(int i = 0; i < 3; i ++){
 					features[0][i] = localSupport(bodyA, a, closestFace[i].r);
@@ -285,20 +319,20 @@ public class GJK {
 	}
 	
 	public static Vec3f planeProjectOrigin(Mkv[] face){
-		Vec3f point = face[0].v.negate();
-		double dot = face[3].v.dot(point);
-		return face[3].v.scale((float) dot).negate();
+		Vec3f point = face[0].v;
+		float dot = face[3].v.dot(point);
+		return face[3].v.scale(dot);
 	}
 	
 	public static double distToPlaneSq(Mkv[] face, Vec3f point){
-		double dot = face[3].v.dot(point.subtract(face[0].v));
-		Vec3f proj = face[3].v.scale((float) dot);
+		float dot = face[3].v.dot(point.subtract(face[0].v));
+		Vec3f proj = face[3].v.scale(dot);
 		return proj.lenSq();
 	}
 	
 	public static double originDistToPlaneSq(Mkv[] face){
-		double dot = face[0].v.dot(face[3].v);
-		Vec3f proj = face[3].v.scale((float) dot);
+		float dot = face[3].v.dot(face[0].v);
+		Vec3f proj = face[3].v.scale(dot);
 		return proj.lenSq();
 	}
 	

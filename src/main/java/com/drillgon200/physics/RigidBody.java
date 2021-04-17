@@ -83,6 +83,7 @@ public class RigidBody {
 	public Matrix3f inv_localInertiaTensor;
 	public Matrix3f inv_globalInertiaTensor;
 	public float friction = 0.95F;
+	public float restitution = 0.5F;
 	public float linearDrag = 0.2F;
 	public float angularDrag = 0.2F;
 	public float gravity = -9.81F;
@@ -122,29 +123,32 @@ public class RigidBody {
 	public void doTimeStep(float dt){
 		contacts.update();
 		//Do collision detection
-		GJKInfo bestInfo = null;
-		Collider a = null;
-		Collider b = null;
-		List<Collider> l = world.static_colliders.getObjectsIntersectingAABB(boundingBox);
+		//GJKInfo bestInfo = null;
+		List<Collider> l = world.getLevel().staticColliders.getObjectsIntersectingAABB(boundingBox);
 		for(Collider wCollider : l){
 			for(int i = 0; i < colliders.size(); i ++){
 				Collider c = colliders.get(i);
 				if(!colliderBoundingBoxes.get(i).intersects(wCollider.getBoundingBox()))
 					continue;
-				b = wCollider;
-				GJKInfo info = GJK.colliding(this, null, c, b);
-				if(info.result == Result.COLLIDING && (bestInfo == null || bestInfo.depth < info.depth)){
-					a = c;
-					bestInfo = info;
+				GJKInfo info = GJK.colliding(this, null, c, wCollider);
+				if(info.result == Result.COLLIDING /*&& (bestInfo == null || bestInfo.depth < info.depth)*/){
+					//No need to find whatever is deepest. We can just add every contact and let the manifold sort itself out correctly.
+					//bestInfo = info;
+					
+					contacts.addContact(new Contact(this, null, c, wCollider, info));
+				} else {
 				}
 			}
 		}
 		
-		if(bestInfo != null){
-			contacts.addContact(new Contact(this, null, a, b, bestInfo));
-		}
+		//if(bestInfo != null){
+		//	contacts.addContact(new Contact(this, null, a, b, info));
+		//}
+		
+		addLinearVelocity(new Vec3f(0, gravity*dt, 0));
 		
 		solveContacts(dt);
+		//linearVelocity = new Vec3f(0, 0, 0);
 		integrateVelocityAndPosition(dt);
 	}
 	
@@ -174,7 +178,6 @@ public class RigidBody {
 		updateAABBs();
 		this.linearVelocity = linearVelocity.scaled(Math.pow(1-linearDrag, dt));
 		this.angularVelocity = angularVelocity.scaled(Math.pow(1-angularDrag, dt));
-		addLinearVelocity(new Vec3f(0, gravity*dt, 0));
 	}
 	
 	public void setPrevData(){
@@ -241,7 +244,7 @@ public class RigidBody {
 	}*/
 	
 	public Vec3f localToGlobalPos(Vec3f pos){
-		return pos.matTransform(rotation).add(position);
+		return pos.matTransform(rotation).mutateAdd(position);
 	}
 	public Vec3f globalToLocalPos(Vec3f pos){
 		return pos.subtract(position).matTransform(inv_rotation);
@@ -388,9 +391,10 @@ public class RigidBody {
 		FloatBuffer buf = AUX_GL_BUFFER;
 		Quat4f quat = new Quat4f();
 		quat.setFromMat(rotation);
-		quat.interpolate(prevRotation, 1-partialTicks);
-		quat.normalize();
-		Matrix3f rotation = quat.matrixFromQuat();
+		Quat4f prev = new Quat4f(prevRotation);
+		prev.interpolate(quat, partialTicks);
+		prev.normalize();
+		Matrix3f rotation = prev.matrixFromQuat();
 		
 		buf.put(0, rotation.m00);
 		buf.put(1, rotation.m10);
@@ -420,8 +424,11 @@ public class RigidBody {
 	public void renderDebugInfo(Vec3f offset, float partialTicks){
 		GL11.glPushMatrix();
 		Tessellator tes = Tessellator.instance;
+		
+		GL11.glDisable(GL11.GL_DEPTH_TEST);
 		for(Contact c : contacts.contacts){
 			if(c != null){
+				
 				tes.begin(GL11.GL_LINES, VertexFormat.POSITION);
 				Vec3f normal = c.normal.scale(0.5F);
 				Vec3f globalA = c.globalA;
@@ -431,23 +438,25 @@ public class RigidBody {
 				
 				tes.pos(globalB.x, globalB.y, globalB.z).endVertex();
 				tes.pos(globalB.x+normal.x, globalB.y+normal.y, globalB.z+normal.z).endVertex();
-				
-				tes.pos(position.x, position.y, position.z).endVertex();
-				tes.pos(position.x+angularVelocity.x, position.y+angularVelocity.y, position.z+angularVelocity.z).endVertex();
 				tes.draw();
 				
 				GL11.glPointSize(16);
 				tes.begin(GL11.GL_POINTS, VertexFormat.POSITION);
 				tes.pos(globalA.x, globalA.y, globalA.z).endVertex();
 				tes.pos(globalB.x, globalB.y, globalB.z).endVertex();
-				tes.pos(position.x, position.y, position.z).endVertex();
+				//long l = System.nanoTime();
 				tes.draw();
+				//System.out.println(System.nanoTime()-l);
 			}
 		}
+		
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
 		doGlTransform(offset, partialTicks);
+		
 		for(Collider c : colliders){
 			c.debugRender();
 		}
+		
 		GL11.glPopMatrix();
 	}
 }

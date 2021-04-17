@@ -12,23 +12,25 @@ import com.drillgon200.shooter.util.Vec3f;
 
 public class Entity {
 
+	public short entityId;
+	
 	public World world;
 	
 	public RigidBody body;
 	
-	public float posX;
-	public float posY;
-	public float posZ;
-	public float prevPosX;
-	public float prevPosY;
-	public float prevPosZ;
+	protected float posX;
+	protected float posY;
+	protected float posZ;
+	protected float prevPosX;
+	protected float prevPosY;
+	protected float prevPosZ;
 	public float motionX;
 	public float motionY;
 	public float motionZ;
 	public boolean isOnGround;
 	public int airTicks = 0;
 	
-	public boolean isDead = false;
+	public boolean markedForRemoval = false;
 	
 	public int age;
 	
@@ -54,29 +56,42 @@ public class Entity {
 	
 	public void update(){
 		age ++;
-		prevPosX = posX;
-		prevPosY = posY;
-		prevPosZ = posZ;
-		if(hasGravity){
-			motionY -= MainConfig.GRAVITY*MainConfig.TICKRATE_RCP;
+		if(!world.isRemote()){
+			if(hasGravity){
+				motionY -= MainConfig.GRAVITY*MainConfig.TICKRATE_RCP;
+			}
+			if(body != null){
+				body.addLinearVelocity(new Vec3f(motionX, motionY, motionZ));
+				body.subdivTimestep();
+				this.posX = body.position.x;
+				this.posY = body.position.y;
+				this.posZ = body.position.z;
+			} else {
+				move(motionX, motionY, motionZ);
+			}
+			this.motionX = 0;
+			this.motionY = 0;
+			this.motionZ = 0;
+			updateGroundState();
 		}
+	}
+	
+	public void updatePositionFromServer(Vec3f pos){
 		if(body != null){
-			body.addLinearVelocity(new Vec3f(motionX, motionY, motionZ));
-			body.subdivTimestep();
-			this.posX = body.position.x;
-			this.posY = body.position.y;
-			this.posZ = body.position.z;
+			body.prevPosition = body.position;
+			body.setPosition(pos);
 		} else {
-			move(motionX, motionY, motionZ);
+			prevPosX = posX;
+			prevPosY = posY;
+			prevPosZ = posZ;
+			posX = pos.x;
+			posY = pos.y;
+			posZ = pos.z;
 		}
-		this.motionX = 0;
-		this.motionY = 0;
-		this.motionZ = 0;
-		updateGroundState();
 	}
 	
 	public void move(double mX, double mY, double mZ){
-		List<Collider> list = world.static_colliders.getObjectsIntersectingAABB(new AxisAlignedBB(-0.5F, -0.5F, -0.5F, 0.5F, 0.5F, 0.5F).offset((float)posX, (float)posY, (float)posZ));
+		List<Collider> list = world.getLevel().staticColliders.getObjectsIntersectingAABB(new AxisAlignedBB(-0.5F, -0.5F, -0.5F, 0.5F, 0.5F, 0.5F).offset((float)posX, (float)posY, (float)posZ));
 		if(!list.isEmpty() && mY < 0)
 			return;
 		posX += mX;
@@ -87,7 +102,7 @@ public class Entity {
 	public void updateGroundState(){
 		if(body != null){
 			isOnGround = false;
-			RayTraceResult res = world.rayCast(new Vec3f(posX, posY, posZ), new Vec3f(posX, posY-0.1F, posZ));
+			RayTraceResult res = world.rayCast(new Vec3f(posX, posY+0.1F, posZ), new Vec3f(posX, posY-0.1F, posZ));
 			if(res.hit)
 				this.isOnGround = true;
 			else
@@ -106,13 +121,21 @@ public class Entity {
 		}
 	}
 	
+	public void setPos(Vec3f vec){
+		setPos(vec.x, vec.y, vec.z);
+	}
+	
 	public void setPos(float x, float y, float z){
 		if(body == null){
+			prevPosX = x;
+			prevPosY = y;
+			prevPosZ = z;
 			this.posX = x;
 			this.posY = y;
 			this.posZ = z;
 		} else {
 			body.setPosition(new Vec3f(x, y, z));
+			body.prevPosition = body.position;
 		}
 	}
 	
@@ -133,6 +156,12 @@ public class Entity {
 	}
 	
 	public Vec3f getInterpolatedPos(float partialTicks){
+		if(body != null){
+			if(partialTicks == 1)
+				return body.position;
+			else
+				return body.prevPosition.add(body.position.subtract(body.prevPosition).scale(partialTicks));
+		}
 		if(partialTicks == 1){
 			return new Vec3f((float)posX, (float)posY, (float)posZ);
 		}

@@ -16,10 +16,12 @@ import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
 
+import com.drillgon200.shooter.MainConfig;
+
 public class TextureManager {
 
 	private static final Map<String, Integer> textures = new HashMap<>();
-	private static ByteBuffer data = GLAllocation.createDirectByteBuffer(1024*1024);
+	private static ByteBuffer data = GLAllocation.createDirectByteBuffer(1024*1024*4);
 	
 	public static int loadTexture(String location){
 		if(textures.containsKey(location)){
@@ -30,6 +32,7 @@ public class TextureManager {
 			BufferedImage img = ImageIO.read(TextureManager.class.getResourceAsStream(location));
 			int size = img.getWidth()*img.getHeight()*4;
 			if(size > data.capacity()){
+				GLAllocation.freeDirectBuffer(data);
 				data = GLAllocation.createDirectByteBuffer(size);
 			}
 			for(int y = img.getHeight()-1; y >= 0; y --){
@@ -41,7 +44,7 @@ public class TextureManager {
 					data.put((byte) ((argb >> 24) & 255));
 				}
 			}
-			data.rewind();
+			data.flip();
 			GL11.glBindTexture(GL11.GL_TEXTURE_2D, tex);
 			GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, img.getWidth(), img.getHeight(), 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, data);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
@@ -49,10 +52,11 @@ public class TextureManager {
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_REPEAT);
 			GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_REPEAT);
 			textures.put(location, tex);
+			data.clear();
+			return tex;
 		} catch(IOException e){
 			throw new RuntimeException("Failed to load texture: " + location, e);
 		}
-		return -1;
 	}
 	
 	public static void bindTexture(String tex){
@@ -84,13 +88,20 @@ public class TextureManager {
 	}
 	
 	public static void filterMipmap(String tex, boolean interp, boolean mipmap){
+		filterMipmapRepeat(tex, interp, mipmap, GL12.GL_REPEAT);
+	}
+	
+	public static void filterMipmapRepeat(String tex, boolean interp, boolean mipmap, int wrap){
 		bindTexture(tex);
+		if(!MainConfig.mipmap){
+			mipmap = false;
+		}
 		int nearFilter = GL11.GL_NEAREST;
 		int farFilter = GL11.GL_NEAREST;
 		if(mipmap){
 			GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
-			if(GL.getCapabilities().GL_EXT_texture_filter_anisotropic){
-				float amount = Math.min(4F, GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+			if(GL.getCapabilities().GL_EXT_texture_filter_anisotropic && MainConfig.anisotropic > 0){
+				float amount = Math.min(MainConfig.anisotropic, GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));
 				GL11.glTexParameterf(GL11.GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, amount);
 			}
 		}
@@ -102,7 +113,7 @@ public class TextureManager {
 		}
 		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, nearFilter);
 		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, farFilter);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_REPEAT);
-		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_REPEAT);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, wrap);
+		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, wrap);
 	}
 }

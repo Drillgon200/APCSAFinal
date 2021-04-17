@@ -7,5 +7,7 @@ public class MainConfig {
 	public static final float TICKRATE_RCP = 1F/(float)TICKRATE;
 	public static final float GRAVITY = 9.81F;
 	
-	public static final int mipmapLevels = 4;
+	public static boolean mipmap = true;
+	public static float anisotropic = 4F;
+	public static int MSAA = 4;
 }

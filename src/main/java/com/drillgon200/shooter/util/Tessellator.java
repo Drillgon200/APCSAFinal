@@ -1,5 +1,6 @@
 package com.drillgon200.shooter.util;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import org.lwjgl.opengl.GL11;
@@ -192,10 +193,11 @@ public class Tessellator {
 	
 	public void draw(){
 		buf.rewind();
+		buf.limit(currentFormat.bytes_per_vertex*vertexCount);
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, buf, GL15.GL_DYNAMIC_DRAW);
 		GL15.glDrawArrays(drawMode, 0, vertexCount);
 		currentFormat.unsetState();
-		buf.rewind();
+		buf.clear();
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		
 		drawMode = 0;
@@ -213,6 +215,7 @@ public class Tessellator {
 		if(buf.position() + bytes >= buf.capacity()){
 			ByteBuffer newBuf = GLAllocation.createDirectByteBuffer((int) (buf.capacity()*1.5));
 			newBuf.put(buf);
+			GLAllocation.freeDirectBuffer(buf);
 			buf = newBuf;
 		}
 	}

@@ -8,6 +8,8 @@ import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL32;
 
+import com.drillgon200.shooter.MainConfig;
+
 public class Framebuffer {
 
 	public int fbo = -1;
@@ -25,6 +27,8 @@ public class Framebuffer {
 		this.height = height;
 		usesDepth = depth;
 		usesStencil = stencil;
+		if(MainConfig.MSAA <= 0)
+			multisample = false;
 		this.multisample = multisample;
 		setupFBO(width, height, depth, stencil);
 		checkFramebuffer();
@@ -43,16 +47,16 @@ public class Framebuffer {
 		fbo_tex = GL11.glGenTextures();
 		if(multisample){
 			GL11.glBindTexture(GL32.GL_TEXTURE_2D_MULTISAMPLE, fbo_tex);
-			GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL11.GL_RGBA8, width, height, false);
+			GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, MainConfig.MSAA, GL11.GL_RGBA8, width, height, false);
 			GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL32.GL_TEXTURE_2D_MULTISAMPLE, fbo_tex, 0);
 			if(depth){
 				depth_tex = GL11.glGenTextures();
 				GL11.glBindTexture(GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex);
 				if(stencil){
-					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL30.GL_DEPTH24_STENCIL8, width, height, false);
+					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, MainConfig.MSAA, GL30.GL_DEPTH24_STENCIL8, width, height, false);
 					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_STENCIL_ATTACHMENT, GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex, 0);
 				} else {
-					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, 4, GL14.GL_DEPTH_COMPONENT24, width, height, false);
+					GL32.glTexImage2DMultisample(GL32.GL_TEXTURE_2D_MULTISAMPLE, MainConfig.MSAA, GL14.GL_DEPTH_COMPONENT24, width, height, false);
 					GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL32.GL_TEXTURE_2D_MULTISAMPLE, depth_tex, 0);
 				}
 			}

@@ -68,9 +68,9 @@ public class ConvexMeshCollider extends Collider {
 		this.vertices = vertices;
 		triangles = new Triangle[indices.length/3];
 		for(int i = 0; i < indices.length; i += 3){
-			Vec3f p1 = new Vec3f(vertices[indices[i+0]+0], vertices[indices[i+0]+1], vertices[indices[i+0]+2]);
-			Vec3f p2 = new Vec3f(vertices[indices[i+1]+0], vertices[indices[i+1]+1], vertices[indices[i+1]+2]);
-			Vec3f p3 = new Vec3f(vertices[indices[i+2]+0], vertices[indices[i+2]+1], vertices[indices[i+2]+2]);
+			Vec3f p1 = new Vec3f(vertices[indices[i+0]*3+0], vertices[indices[i+0]*3+1], vertices[indices[i+0]*3+2]);
+			Vec3f p2 = new Vec3f(vertices[indices[i+1]*3+0], vertices[indices[i+1]*3+1], vertices[indices[i+1]*3+2]);
+			Vec3f p3 = new Vec3f(vertices[indices[i+2]*3+0], vertices[indices[i+2]*3+1], vertices[indices[i+2]*3+2]);
 			triangles[i/3] = new Triangle(p1, p2, p3);
 		}
 		float maxX = support(RigidBody.cardinals[0]).x;

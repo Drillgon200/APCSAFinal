@@ -2,6 +2,9 @@ package com.drillgon200.shooter.util;
 
 public class MathHelper {
 	
+	public static final int tenBits = 1023;
+	public static final int eightBits = 255;
+	
     public static float wrapDegrees(float value){
         value = value % 360.0F;
         if (value >= 180.0F){
@@ -136,5 +139,44 @@ public class MathHelper {
 		}
 		float denom = cross.len();
 		return Math.abs(c.dot(cross))/denom;
+	}
+	
+	public static float fract(float number) {
+		return (float) (number - Math.floor(number));
+	}
+	
+	public static int encode2101010Normal(Vec3f vec, byte extra){
+		float x = vec.x*0.5F + 0.5F;
+		float y = vec.y*0.5F + 0.5F;
+		float z = vec.z*0.5F + 0.5F;
+		int xi = (int)(x*tenBits);
+		int yi = (int)(y*tenBits);
+		int zi = (int)(z*tenBits);
+		return  (extra << 30) |
+				(zi << 20) |
+				(yi << 10) |
+				(xi);
+	}
+	
+	public static int encodeRGBA(Vec3f color, int alpha){
+		int r = (int)(color.x*eightBits);
+		int g = (int)(color.y*eightBits);
+		int b = (int)(color.z*eightBits);
+		int a = alpha;
+		return  (r << 24) |
+				(g << 16) |
+				(b << 8) |
+				(a);
+	}
+	
+	public static int encodeRGBA(Vec4f color){
+		int r = (int)(color.x*eightBits);
+		int g = (int)(color.y*eightBits);
+		int b = (int)(color.z*eightBits);
+		int a = (int)(color.w*eightBits);
+		return  (r << 24) |
+				(g << 16) |
+				(b << 8) |
+				(a);
 	}
 }

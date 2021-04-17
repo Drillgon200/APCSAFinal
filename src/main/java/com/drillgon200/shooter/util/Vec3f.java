@@ -4,6 +4,10 @@ public class Vec3f {
 
 	public float x, y, z;
 	
+	public Vec3f(float val) {
+		this(val, val, val);
+	}
+	
 	public Vec3f(float x, float y, float z) {
 		this.x = x;
 		this.y = y;
@@ -48,12 +52,26 @@ public class Vec3f {
     	return new Vec3f(x+other.x, y+other.y, z+other.z);
     }
     
+    public Vec3f mutateAdd(Vec3f other){
+    	this.x += other.x;
+    	this.y += other.y;
+    	this.z += other.z;
+    	return this;
+    }
+    
     public Vec3f add(float x, float y, float z){
     	return new Vec3f(this.x+x, this.y+y, this.z+z);
     }
     
     public Vec3f subtract(Vec3f other){
     	return new Vec3f(x-other.x, y-other.y, z-other.z);
+    }
+    
+    public Vec3f mutateSubtract(Vec3f other){
+    	this.x -= other.x;
+    	this.y -= other.y;
+    	this.z -= other.z;
+    	return this;
     }
     
     public Vec3f subtract(float x, float y, float z){
@@ -70,6 +88,13 @@ public class Vec3f {
 
 	public Vec3f scale(float f) {
 		return new Vec3f(x*f, y*f, z*f);
+	}
+	
+	public Vec3f mutateScale(float f){
+		this.x *= f;
+		this.y *= f;
+		this.z *= f;
+		return this;
 	}
 	
 	public Vec3f scaled(double d) {
@@ -123,6 +148,10 @@ public class Vec3f {
 		return new Vec3f(x*lengthRcp, y*lengthRcp, z*lengthRcp);
 	}
 	
+	public Vec3f mul(Vec3f other){
+		return new Vec3f(x*other.x, y*other.y, z*other.z);
+	}
+	
 	//https://en.wikipedia.org/wiki/Outer_product
 	public Matrix3f outerProduct(Vec3f other) {
 		Matrix3f mat = new Matrix3f(
@@ -149,6 +178,18 @@ public class Vec3f {
 		float dy = this.y-other.y;
 		float dz = this.z-other.z;
 		return (float) Math.sqrt(dx*dx + dy*dy + dz*dz);
+	}
+	
+	public Vec3f lerp(Vec3f other, float interp) {
+		return new Vec3f(x + (other.x-x)*interp, y + (other.y-y)*interp, z + (other.z-z)*interp);
+	}
+	
+	public Vec3f max(Vec3f other){
+		return new Vec3f(Math.max(x, other.x), Math.max(y, other.y), Math.max(z, other.z));
+	}
+	
+	public Vec3f min(Vec3f other){
+		return new Vec3f(Math.min(x, other.x), Math.min(y, other.y), Math.min(z, other.z));
 	}
 	
 	public Vec3f copy() {

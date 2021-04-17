@@ -166,7 +166,7 @@ public class CapsuleCollider extends Collider {
 	
 	@Override
 	public void debugRender() {
-		RenderHelper.drawCapsule(localCentroid, height, radius, 12);
+		RenderHelper.drawCapsule(localCentroid, height, radius, 24);
 		RenderHelper.drawBoundingBox(box);
 	}
 

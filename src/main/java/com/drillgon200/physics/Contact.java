@@ -96,8 +96,17 @@ public class Contact {
 			
 			bias = 0.0F;
 			if(!tangent){
+				float closingVel = c.bodyA.linearVelocity.negate()
+						.subtract(c.bodyA.angularVelocity.cross(c.rA))
+						.add(c.bodyB.linearVelocity)
+						.add(c.bodyB.angularVelocity.cross(c.rB))
+						.dot(c.normal);
+				float restitution = c.bodyA.restitution*c.bodyB.restitution;
+				
 				float beta = 0.2F;
-				bias = -(beta/dt)*c.depth;
+				float dslop = 0.0005F;
+				float rslop = 0.5F;
+				bias = -(beta/dt)*Math.max(c.depth-dslop, 0)+Math.max(restitution*closingVel-rslop, 0);
 			}
 			
 			effectiveMass = 
@@ -125,7 +134,7 @@ public class Contact {
 			} else {
 				totalLambda = Math.max(0, totalLambda + lambda);
 			}
-			lambda = totalLambda - oldTotalLambda;	
+			lambda = totalLambda - oldTotalLambda;
 			
 			c.bodyA.addLinearVelocity(j_va.scaled(c.bodyA.inv_mass * lambda));
 			c.bodyA.addAngularVelocity(j_wa.matTransform(c.bodyA.inv_globalInertiaTensor).scaled(lambda));

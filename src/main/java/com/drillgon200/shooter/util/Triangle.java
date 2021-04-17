@@ -18,9 +18,9 @@ public class Triangle {
 	 * @return whether the point is bound by the triangle or not
 	 */
 	public boolean checkPointInTriangle(Vec3f point){
-		Vec3f toP1 = point.subtract(this.p1);
-		Vec3f toP2 = point.subtract(this.p2);
-		Vec3f toP3 = point.subtract(this.p3);
+		Vec3f toP1 = this.p1.subtract(point);
+		Vec3f toP2 = this.p2.subtract(point);
+		Vec3f toP3 = this.p3.subtract(point);
 		
 		return toP1.cross(toP2).dot(this.normal) > 0 && toP2.cross(toP3).dot(this.normal) > 0 && toP3.cross(toP1).dot(this.normal) > 0;
 	}

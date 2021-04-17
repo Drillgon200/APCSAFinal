@@ -1,21 +1,29 @@
 package com.drillgon200.physics;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Stack;
+import java.util.function.Consumer;
 
 import com.drillgon200.shooter.util.Vec3f;
 
-public class AABBTree<T extends TreeObject<T>> {
+public class AABBTree<T extends TreeObject<T>> implements Iterable<T> {
 	//https://box2d.org/files/ErinCatto_DynamicBVH_GDC2019.pdf
 	
 	private Node<T> root;
 	private List<Node<T>> invalids = new ArrayList<>();
 	private List<Node<T>> collidingPairs = new ArrayList<>();
 	private float margin;
+	private int objectCount;
 	
 	public AABBTree(float margin){
 		this.margin = margin;
+	}
+	
+	public int size(){
+		return objectCount;
 	}
 	
 	//Catto said "this leaves out several important optimizations", but I can't think of any, and I can't find the ray cast code in box2d
@@ -26,8 +34,9 @@ public class AABBTree<T extends TreeObject<T>> {
 		}
 		Vec3f direction = point2.subtract(point1);
 		RayTraceResult bestResult = new RayTraceResult();
-		Stack<Node<T>> stack = new Stack<>();
-		stack.push(root);
+		Deque<Node<T>> stack = new ArrayDeque<>();
+		if(root != null)
+			stack.push(root);
 		while(!stack.isEmpty()){
 			Node<T> n = stack.pop();
 			if(n.box.rayIntercepts(point1, direction) == null){
@@ -35,7 +44,7 @@ public class AABBTree<T extends TreeObject<T>> {
 			}
 			if(n.isLeaf){
 				RayTraceResult r = n.object.rayCast(point1, point2);
-				if(!bestResult.hit || r.timeOfImpact < bestResult.timeOfImpact){
+				if(r.hit && (!bestResult.hit || r.timeOfImpact < bestResult.timeOfImpact)){
 					bestResult = r;
 				}
 			} else {
@@ -46,10 +55,44 @@ public class AABBTree<T extends TreeObject<T>> {
 		return bestResult;
 	}
 	
+	@Override
+	public void forEach(Consumer<? super T> c){
+		Deque<Node<T>> stack = new ArrayDeque<>();
+		if(root != null)
+			stack.push(root);
+		while(!stack.isEmpty()){
+			Node<T> n = stack.pop();
+			if(n.isLeaf){
+				c.accept(n.object);
+			} else {
+				stack.push(n.child1);
+				stack.push(n.child2);
+			}
+		}
+	}
+	
+	public void forEach(TreeConsumer<? super T> c){
+		Deque<Node<T>> stack = new ArrayDeque<>();
+		if(root != null)
+			stack.push(root);
+		while(!stack.isEmpty()){
+			Node<T> n = stack.pop();
+			if(!c.shouldContinue(n.box))
+				continue;
+			if(n.isLeaf){
+				c.accept(n.object);
+			} else {
+				stack.push(n.child1);
+				stack.push(n.child2);
+			}
+		}
+	}
+	
 	public List<T> getObjectsIntersectingAABB(AxisAlignedBB box){
 		List<T> list = new ArrayList<>();
-		Stack<Node<T>> stack = new Stack<>();
-		stack.push(root);
+		Deque<Node<T>> stack = new ArrayDeque<>();
+		if(root != null)
+			stack.push(root);
 		while(!stack.isEmpty()){
 			Node<T> n = stack.pop();
 			if(!n.box.intersects(box))
@@ -75,13 +118,14 @@ public class AABBTree<T extends TreeObject<T>> {
 			node.updateAABB(margin);
 			insertNode(node);
 		}
+		objectCount ++;
 	}
 	
 	private Node<T> findBestPair(Node<T> node){
 		//Branch and bound algorithm for finding the best pair for this node
 		Node<T> bestSibling = root;
 		float bestCost = root.box.union(node.box).area();
-		Stack<Pair<Node<T>, Float>> stack = new Stack<>();
+		Deque<Pair<Node<T>, Float>> stack = new ArrayDeque<>();
 		float nCost = bestCost-root.box.area();
 		stack.push(new Pair<>(root, nCost));
 		while(!stack.isEmpty()){
@@ -114,6 +158,7 @@ public class AABBTree<T extends TreeObject<T>> {
 		Node<T> oldParent = pair.parent;
 		Node<T> newParent = new Node<>();
 		newParent.setBranch(node, pair);
+		newParent.parent = oldParent;
 		
 		if(oldParent == null){
 			root = newParent;
@@ -248,6 +293,7 @@ public class AABBTree<T extends TreeObject<T>> {
 		} else {
 			root = null;
 		}
+		objectCount --;
 	}
 	
 	public void updateTree(){
@@ -316,5 +362,41 @@ public class AABBTree<T extends TreeObject<T>> {
 		public Node<T> getSibling(){
 			return this == parent.child1 ? parent.child2 : parent.child1;
 		}
+	}
+
+	@Override
+	public Iterator<T> iterator() {
+		return new TreeIterator();
+	}
+	
+	private class TreeIterator implements Iterator<T> {
+		
+		private Deque<Node<T>> stack;
+		
+		public TreeIterator() {
+			stack = new ArrayDeque<>();
+			if(root != null)
+				stack.push(root);
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return !stack.isEmpty();
+		}
+
+		@Override
+		public T next() {
+			while(!stack.isEmpty()){
+				Node<T> n = stack.pop();
+				if(n.isLeaf){
+					return n.object;
+				} else {
+					stack.push(n.child1);
+					stack.push(n.child2);
+				}
+			}
+			return null;
+		}
+		
 	}
 }

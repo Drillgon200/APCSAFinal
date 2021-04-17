@@ -1,0 +1,119 @@
+struct PointLight {
+	//Use a single vec4 for position and strength/radius^2 (to make sure falloff reaches 0 at the radius) to save space
+	vec4 positionAndRadius;
+	//Single vec4 for color and intensity
+	vec4 colorAndStrength;
+};
+
+struct SpotLight {
+	vec4 positionAndRadius;
+	vec4 colorAndStrength;
+	vec4 direction;
+	vec2 angles;
+};
+
+struct SunLight {
+	vec4 colorAndStrength;
+	vec4 direction;
+};
+
+struct Material {
+	sampler2D color;
+	sampler2D metallic;
+	sampler2D normal;
+	float specular;
+	float roughness;
+	float ior;
+	vec4 emission;
+};
+
+float linearizeDepth(float depth){
+	float depthRange = 2.0 * depth - 1.0;
+	return 2.0 * zNear * zFar / (zFar + zNear - depthRange*(zFar-zNear));
+}
+
+int getClusterIndex(vec2 fragPos, float fragDepth){
+	ivec2 nPos = ivec2((fragPos/screenSize)*vec2(WIDTH_SLICES, HEIGHT_SLICES));
+	int depth = int(log(fragDepth)*scale - bias);
+	return depth*WIDTH_SLICES*HEIGHT_SLICES + nPos.x*HEIGHT_SLICES + nPos.y;
+}
+
+int getBitField(uint bits, int offset, int size){
+	return int((bits >> offset) & uint((0xFFFFFFFF ^ (0xFFFFFFFF << size))));
+}
+
+int getBitFieldFloat(float bits, int offset, int size){
+	return getBitField(floatBitsToUint(bits), offset, size);
+}
+
+vec4 unpack2101010(uint bits){
+	float x = float(getBitField(bits, 0, 10))*rcp_10bits;
+	float y = float(getBitField(bits, 10, 10))*rcp_10bits;
+	float z = float(getBitField(bits, 20, 10))*rcp_10bits;
+	float w = float(getBitField(bits, 30, 2))*rcp_2bits;
+	
+	return vec4(x, y, z, w);
+}
+
+vec4 unpack2101010Float(float bits){
+	return unpack2101010(floatBitsToUint(bits));
+}
+
+vec3 unpack2101010Vec3(uint bits){
+	float x = float(getBitField(bits, 0, 10));
+	float y = float(getBitField(bits, 10, 10));
+	float z = float(getBitField(bits, 20, 10));
+	
+	return vec3(x, y, z)*rcp_10bits;
+}
+
+vec3 unpack2101010Vec3Float(float bits){
+	return unpack2101010Vec3(floatBitsToUint(bits));
+}
+
+vec4 unpackVec4(uint bits){
+	float r = float((bits >> 24) & uint(0xFF));
+	float g = float((bits >> 16) & uint(0xFF));
+	float b = float((bits >> 8) & uint(0xFF));
+	float a = float((bits) & uint(0xFF));
+	
+	return vec4(r, g, b, a)*rcp_8bits;
+}
+
+vec4 unpackVec4Float(float bits){
+	return unpackVec4(floatBitsToUint(bits));
+}
+
+vec3 unpackVec3(uint bits){
+	float r = float((bits >> 24) & uint(0xFF));
+	float g = float((bits >> 16) & uint(0xFF));
+	float b = float((bits >> 8) & uint(0xFF));
+	
+	return vec3(r, g, b)*rcp_8bits;
+}
+
+vec3 unpackVec3Float(float bits){
+	return unpackVec3(floatBitsToUint(bits));
+}
+
+int getLightType(float directionAndType){
+	return int((floatBitsToUint(directionAndType) >> 30) & uint(3));
+}
+
+PointLight decodePointLight(vec4 positionAndRadius, vec4 data){
+	vec3 color = unpackVec3Float(data.y);
+	return PointLight(positionAndRadius, vec4(color, data.w));
+}
+
+SpotLight decodeSpotLight(vec4 positionAndRadius, vec4 data){
+	vec3 color = unpackVec3Float(data.y);
+	vec3 direction = unpack2101010Vec3Float(data.x)*2-1;
+	vec2 angles = unpack2101010Vec3Float(data.z).xy;
+	return SpotLight(positionAndRadius, vec4(color, data.w), vec4(direction, 0), angles);
+}
+
+SunLight decodeSunLight(vec4 positionAndRadius, vec4 data){
+	vec3 color = unpackVec3Float(data.y);
+	vec3 direction = unpack2101010Vec3Float(data.x)*2-1;
+	return SunLight(vec4(color, data.w), vec4(direction, 0));
+}

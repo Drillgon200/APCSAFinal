@@ -20,7 +20,7 @@ public class ContactManifold {
 			c.globalA = c.bodyA.localToGlobalPos(c.localA);
 			c.globalB = c.bodyB.localToGlobalPos(c.localB);
 			
-			contacts[i].depth = (float) c.globalA.subtract(c.globalB).dot(c.normal);
+			contacts[i].depth = c.globalA.subtract(c.globalB).dot(c.normal);
 		}
 		
 		for(int i = 0; i < contactCount; i ++){
@@ -31,7 +31,7 @@ public class ContactManifold {
 				i --;
 			} else {
 				Vec3f proj = c.globalA.subtract(c.normal.scale(c.depth));
-				double orthoDistToB = proj.subtract(c.globalB).lenSq();
+				double orthoDistToB = c.globalB.subtract(proj).lenSq();
 				if(orthoDistToB > CONTACT_BREAK_SQ){
 					removeContact(i);
 					i--;

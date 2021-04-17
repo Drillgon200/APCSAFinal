@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
@@ -16,6 +18,8 @@ public class ShaderManager {
 	
 	public static final FloatBuffer AUX_GL_BUFFER = GLAllocation.createDirectFloatBuffer(16);
 	private static final List<Shader> ALL_SHADERS = new ArrayList<>();
+	private static final Map<String, String> cachedShaders = new HashMap<>();
+	private static int active_shader = 0;
 	
 	public static final Uniform MODELVIEW_PROJECTION_MATRIX = shader -> {
 		//No idea if all these rewind calls are necessary. I'll have to check that later.
@@ -200,7 +204,15 @@ public class ShaderManager {
     	return loadShader(file, false);
     }
     
-	public static Shader loadShader(String file, boolean hasGeoShader) {
+    public static Shader loadShader(String file, String ext) {
+    	return loadShader(file, false, ext);
+    }
+    
+    public static Shader loadShader(String file, boolean hasGeoShader) {
+    	return loadShader(file, hasGeoShader, null);
+    }
+    
+	public static Shader loadShader(String file, boolean hasGeoShader, String extension) {
 		int vertexShader = 0;
 		int fragmentShader = 0;
 		int geometryShader = 0;
@@ -208,7 +220,7 @@ public class ShaderManager {
 			int program = GL20.glCreateProgram();
 			
 			vertexShader = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
-			GL20.glShaderSource(vertexShader, readFileToString(file + ".vert"));
+			GL20.glShaderSource(vertexShader, preprocess(readFileToString(file + ".vert"), extension, ".vext"));
 			GL20.glCompileShader(vertexShader);
 			if(GL20.glGetShaderi(vertexShader, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE) {
 				System.err.println(GL20.glGetShaderInfoLog(vertexShader, GL20.GL_INFO_LOG_LENGTH));
@@ -216,7 +228,7 @@ public class ShaderManager {
 			}
 			
 			fragmentShader = GL20.glCreateShader(GL20.GL_FRAGMENT_SHADER);
-			GL20.glShaderSource(fragmentShader, readFileToString(file + ".frag"));
+			GL20.glShaderSource(fragmentShader, preprocess(readFileToString(file + ".frag"), extension, ".fext"));
 			GL20.glCompileShader(fragmentShader);
 			if(GL20.glGetShaderi(fragmentShader, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE) {
 				System.err.println(GL20.glGetShaderInfoLog(fragmentShader, GL20.GL_INFO_LOG_LENGTH));
@@ -225,7 +237,7 @@ public class ShaderManager {
 			
 			if(hasGeoShader){
 				geometryShader = GL20.glCreateShader(GL32.GL_GEOMETRY_SHADER);
-				GL20.glShaderSource(geometryShader, readFileToString(file + ".geo"));
+				GL20.glShaderSource(geometryShader, preprocess(readFileToString(file + ".geo"), extension, ".gext"));
 				GL20.glCompileShader(geometryShader);
 				if(GL20.glGetShaderi(geometryShader, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE) {
 					System.err.println(GL20.glGetShaderInfoLog(geometryShader, GL20.GL_INFO_LOG_LENGTH));
@@ -271,16 +283,77 @@ public class ShaderManager {
 		ALL_SHADERS.clear();
 	}
 
+	//Adds any imported functions or replaces functions from the extension shader
+	private static String preprocess(String shader, String extension, String extType) throws IOException {
+		StringBuilder build = new StringBuilder();
+		int lenImport = "import ".length();
+		int lenExtStart = "extension_start:".length();
+		int lenExtEnd = "extension_end:".length();
+		
+		for(int i = 0; i < shader.length(); i ++){
+			if(i < shader.length()-lenImport){
+				if(shader.substring(i, i+lenImport).equals("import ")){
+					int endIdx = i+lenImport;
+					for(int j = i+lenImport; j < shader.length(); j ++){
+						if(shader.charAt(j) == ';'){
+							endIdx = j;
+							break;
+						}
+					}
+					String name = shader.substring(i+lenImport, endIdx);
+					String file = readFileToString("/assets/shooter/shaders/" + name + ".ext");
+					build.append(file);
+					i = endIdx;
+				}
+			}
+			
+			String extFile = readFileToString("/assets/shooter/shaders/" + extension + extType);
+			if(extension != null && extFile != null){
+				if(i < shader.length()-lenExtStart && shader.substring(i, i+lenExtStart).equals("extension_start:")){
+					int endIdx = i+lenExtStart;
+					for(int j = i+lenExtStart; j < shader.length(); j ++){
+						if(shader.substring(j, j+lenExtEnd).equals("extension_end:")){
+							endIdx = j;
+							break;
+						}
+					}
+					build.append(extFile);
+					i = endIdx;
+				}
+			} else {
+				if(i < shader.length()-lenExtStart && shader.substring(i, i+lenExtStart).equals("extension_start:")){
+					i += lenExtStart;
+				}
+				if(i < shader.length()-lenExtEnd && shader.substring(i, i+lenExtEnd).equals("extension_end:")){
+					i += lenExtEnd;
+				}
+			}
+			
+			build.append(shader.charAt(i));
+		}
+		
+		return build.toString();
+	}
+	
 	private static String readFileToString(String file) throws IOException {
 		InputStream in = ShaderManager.class.getResourceAsStream(file);
+		if(in == null)
+			return null;
 		byte[] bytes = new byte[in.available()];
 		in.read(bytes);
 		in.close();
-		return new String(bytes);
+		String strFile = new String(bytes);
+		cachedShaders.put(file, strFile);
+		return strFile;
 	}
 	
 	public static void releaseShader(){
+		active_shader = 0;
 		GL20.glUseProgram(0);
+	}
+	
+	public static void color(float r, float g, float b, float a){
+		GL20.glUniform4f(GL20.glGetUniformLocation(active_shader, "color"), r, g, b, a);
 	}
 	
 	public static class Shader {
@@ -300,6 +373,9 @@ public class ShaderManager {
 		}
 		
 		public void use(){
+			if(active_shader == shader)
+				return;
+			active_shader = shader;
 			GL20.glUseProgram(shader);
 			for(Uniform u : uniforms){
 				u.apply(shader);

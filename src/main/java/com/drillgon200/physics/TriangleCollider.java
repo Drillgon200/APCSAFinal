@@ -2,6 +2,7 @@ package com.drillgon200.physics;
 
 import org.lwjgl.opengl.GL11;
 
+import com.drillgon200.shooter.Shooter;
 import com.drillgon200.shooter.util.Matrix3f;
 import com.drillgon200.shooter.util.Tessellator;
 import com.drillgon200.shooter.util.Triangle;
@@ -61,11 +62,15 @@ public class TriangleCollider extends Collider {
 	public Vec3f support(Vec3f direction) {
 		float dot = direction.dot(tri.p1);
 		Vec3f vert = tri.p1;
-		if(direction.dot(tri.p2) > dot){
+		float newDot = direction.dot(tri.p2);
+		if(newDot > dot){
 			vert = tri.p2;
+			dot = newDot;
 		}
-		if(direction.dot(tri.p3) > dot){
+		newDot = direction.dot(tri.p3);
+		if(newDot > dot){
 			vert = tri.p3;
+			dot = newDot;
 		}
 		return vert;
 	}

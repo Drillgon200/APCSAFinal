@@ -12,6 +12,10 @@ public class Matrix3f implements Cloneable {
 	public Matrix3f() {
 		setIdentity();
 	}
+	
+	public Matrix3f(Vec3f c1, Vec3f c2, Vec3f c3){
+		this(c1.x, c1.y, c1.z, c2.x, c2.y, c2.z, c3.x, c3.y, c3.z);
+	}
 
 	public Matrix3f(float m00, float m01, float m02, float m10, float m11, float m12, float m20, float m21, float m22) {
 		this.m00 = m00;
@@ -302,6 +306,10 @@ public class Matrix3f implements Cloneable {
 		this.m22 -= m1.m22;
 	}
 
+	public Vec3f transform(Vec3f vec) {
+		return transform(this, vec);
+	}
+	
 	/**
 	 * Transform a Vector by a matrix and return the result in a destination
 	 * vector.
@@ -560,6 +568,12 @@ public class Matrix3f implements Cloneable {
 		return load(src, this);
 	}
 
+	public Matrix4f toMat4(){
+		Matrix4f mat = new Matrix4f();
+		mat.set(this);
+		return mat;
+	}
+	
 	/**
 	 * Copy source matrix to destination matrix
 	 * 
@@ -671,6 +685,10 @@ public class Matrix3f implements Cloneable {
 		buf.put(m12);
 		buf.put(m22);
 		return this;
+	}
+	
+	public Matrix3f copy(){
+		return new Matrix3f().set(this);
 	}
 
 	@Override
