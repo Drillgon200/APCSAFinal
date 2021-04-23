@@ -11,9 +11,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 
-import com.drillgon200.networking.Connection;
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.NetServer;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.MessageContext;
+import com.drillgon200.networking.udp.UDPNetworkThreadServer;
 import com.drillgon200.shooter.entity.Entity;
 import com.drillgon200.shooter.entity.EntityRegistry;
 import com.drillgon200.shooter.entity.PlayerServer;
@@ -27,7 +27,7 @@ public class ShooterServer {
 	
 	public volatile static ServerState state = ServerState.DOWN;
 	public volatile static Thread updateThread;
-	public volatile static NetServer server;
+	public volatile static UDPNetworkThreadServer netServer;
 	
 	public static long serverTicks = 0;
 	private static long lastTickTime;
@@ -85,8 +85,8 @@ public class ShooterServer {
 			updateThread.start();
 			
 			log.addLast("Initializing net server on port + " + port + "...");
-			server = new NetServer(port);
-			server.start(log);
+			netServer = new UDPNetworkThreadServer(port, log);
+			netServer.start();
 			
 			state = ServerState.ACTIVE;
 			log.addLast("Server active!");
@@ -161,18 +161,19 @@ public class ShooterServer {
 		serverTicks ++;
 	}
 	
-	public static void tryJoinPlayer(Connection c) {
+	public static void tryJoinPlayer(MessageContext c) {
 		if(world.playerEntities.size() > 3)
 			return;
 		Vec3f pos = world.level.possibleSpawns.get(world.rand.nextInt(world.level.possibleSpawns.size()));
 		PlayerServer player = new PlayerServer(world, pos.x, pos.y, pos.z);
-		player.connection = c;
+		player.connection = c.connection;
+		c.connection.player = player;
 		for(Entity ent : world.entities){
 			world.sendEntityAddPacket(player.connection, ent);
 		}
 		world.addEntity(player);
 		players.add(player);
-		player.connection.sendPacket(new SPacketJoinClient(player.entityId));
+		player.connection.sendMessage(new SPacketJoinClient(player.entityId));
 	}
 	
 	public static void sendStateUpdatePacket(){
@@ -185,9 +186,9 @@ public class ShooterServer {
 			data[i+2] = Float.floatToIntBits(pos.y);
 			data[i+3] = Float.floatToIntBits(pos.z);
 		}
-		IMessage update = new SPacketStateUpdate(data);
+		IMessageUDP update = new SPacketStateUpdate(data);
 		for(PlayerServer p : players){
-			p.connection.sendPacket(update);
+			p.connection.sendMessage(update);
 		}
 	}
 	
@@ -217,7 +218,7 @@ public class ShooterServer {
 			world.getLevel().delete();
 			
 			log.addLast("Shutting down net server...");
-			server.shutdown();
+			netServer.terminate();
 			
 			state = ServerState.DOWN;
 			log.addLast("Waiting for update thread to terminate...");

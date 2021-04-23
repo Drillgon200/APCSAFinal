@@ -22,7 +22,8 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 
-import com.drillgon200.networking.NetworkThreadClient;
+import com.drillgon200.networking.tcp.TCPNetworkThreadClient;
+import com.drillgon200.networking.udp.UDPNetworkThreadClient;
 import com.drillgon200.physics.GJK;
 import com.drillgon200.shooter.entity.EntityRegistry;
 import com.drillgon200.shooter.entity.Player;
@@ -87,7 +88,7 @@ public class Shooter {
 	private static Queue<Runnable> scheduledTasks = new ArrayDeque<>();
 	
 	public static TitleScreen titleScreen;
-	public static NetworkThreadClient connection;
+	public static UDPNetworkThreadClient connection;
 	
 	public static EntityRegistry entityRegistry;
 	public static WorldClient world;
@@ -216,7 +217,7 @@ public class Shooter {
 		System.out.println("Finished.");
 		checkGLError();
 		
-		connection = new NetworkThreadClient();
+		connection = new UDPNetworkThreadClient();
 		connection.start();
 		
 		skybox = new Skybox("/assets/shooter/textures/skybox/space0");

@@ -1,21 +1,21 @@
-package com.drillgon200.networking;
+package com.drillgon200.networking.tcp;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class Connection {
+public class TCPConnection {
 
 	public SocketChannel channel;
-	public MessageReader reader;
-	public MessageWriter writer;
+	public TCPMessageReader reader;
+	public TCPMessageWriter writer;
 	public volatile boolean isClosed = false;
 	public long lastCommunicatedTime;
 	
-	public Connection(SocketChannel c) {
+	public TCPConnection(SocketChannel c) {
 		this.channel = c;
-		reader = new MessageReader();
-		writer = new MessageWriter();
+		reader = new TCPMessageReader();
+		writer = new TCPMessageWriter();
 	}
 	
 	public int read(ByteBuffer buf) throws IOException {
@@ -40,8 +40,8 @@ public class Connection {
 		return totalBytesWritten;
 	}
 	
-	public void sendPacket(IMessage m){
-		if(NetworkManager.idsByMessage.containsKey(m.getClass())){
+	public void sendPacket(IMessageTCP m){
+		if(TCPNetworkManager.idsByMessage.containsKey(m.getClass())){
 			writer.writeQueue.add(m);
 		} else {
 			throw new RuntimeException("Unregistered packet: " + m.getClass());

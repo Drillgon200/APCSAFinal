@@ -1,10 +1,15 @@
 package com.drillgon200.shooter;
 
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.NetworkManager;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.UDPNetworkManager;
 import com.drillgon200.shooter.entity.Player;
 import com.drillgon200.shooter.entity.PlayerServer;
-import com.drillgon200.shooter.packets.*;
+import com.drillgon200.shooter.packets.CPacketJoinServer;
+import com.drillgon200.shooter.packets.CPacketPlayerInput;
+import com.drillgon200.shooter.packets.SPacketAddEntity;
+import com.drillgon200.shooter.packets.SPacketJoinClient;
+import com.drillgon200.shooter.packets.SPacketRemoveEntity;
+import com.drillgon200.shooter.packets.SPacketStateUpdate;
 
 public class PacketDispatcher {
 
@@ -13,40 +18,39 @@ public class PacketDispatcher {
 	public static void registerPackets(){
 		if(registered)
 			return;
-		int i = 0;
-		NetworkManager.registerPacket(CPacketJoinServer.class, CPacketJoinServer.Handler.class, i++, Side.SERVER);
-		NetworkManager.registerPacket(SPacketJoinClient.class, SPacketJoinClient.Handler.class, i++, Side.CLIENT);
-		NetworkManager.registerPacket(SPacketAddEntity.class, SPacketAddEntity.Handler.class, i++, Side.CLIENT);
-		NetworkManager.registerPacket(SPacketRemoveEntity.class, SPacketRemoveEntity.Handler.class, i++, Side.CLIENT);
-		NetworkManager.registerPacket(SPacketStateUpdate.class, SPacketStateUpdate.Handler.class, i++, Side.CLIENT);
-		NetworkManager.registerPacket(CPacketPlayerInput.class, CPacketPlayerInput.Handler.class, i++, Side.SERVER);
+		UDPNetworkManager.registerPacket(CPacketJoinServer.class, CPacketJoinServer.Handler.class, Side.SERVER);
+		UDPNetworkManager.registerPacket(SPacketJoinClient.class, SPacketJoinClient.Handler.class, Side.CLIENT);
+		UDPNetworkManager.registerPacket(SPacketAddEntity.class, SPacketAddEntity.Handler.class, Side.CLIENT);
+		UDPNetworkManager.registerPacket(SPacketRemoveEntity.class, SPacketRemoveEntity.Handler.class, Side.CLIENT);
+		UDPNetworkManager.registerPacket(SPacketStateUpdate.class, SPacketStateUpdate.Handler.class, Side.CLIENT);
+		UDPNetworkManager.registerPacket(CPacketPlayerInput.class, CPacketPlayerInput.Handler.class, Side.SERVER);
 		registered = true;
 	}
 	
-	public static void sendTo(Player p, IMessage m){
+	public static void sendTo(Player p, IMessageUDP m){
 		if(p instanceof PlayerServer){
-			p.connection.sendPacket(m);
+			p.connection.sendMessage(m);
 		}
 	}
 	
-	public static void sendToAll(IMessage m){
+	public static void sendToAll(IMessageUDP m){
 		for(PlayerServer p : ShooterServer.players){
-			p.connection.sendPacket(m);
+			p.connection.sendMessage(m);
 		}
 	}
 	
-	public static void sendToServer(IMessage m){
-		Shooter.connection.serverConnection.sendPacket(m);
+	public static void sendToServer(IMessageUDP m){
+		Shooter.connection.serverConnection.sendMessage(m);
 	}
 
-	public static void sendToAllExcept(IMessage m, PlayerServer... ents) {
+	public static void sendToAllExcept(IMessageUDP m, PlayerServer... ents) {
 		l:
 		for(PlayerServer p : ShooterServer.players){
 			for(int i = 0; i < ents.length; i ++){
 				if(ents[i] == p)
 					continue l;
 			}
-			p.connection.sendPacket(m);
+			p.connection.sendMessage(m);
 		}
 	}
 }

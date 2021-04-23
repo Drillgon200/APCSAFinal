@@ -1,14 +1,13 @@
 package com.drillgon200.shooter.packets;
 
-import java.nio.ByteBuffer;
-
-import com.drillgon200.networking.Connection;
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.IMessageHandler;
+import com.drillgon200.networking.udp.IMessageHandlerUDP;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.MessageContext;
+import com.drillgon200.networking.udp.Stream;
 import com.drillgon200.shooter.Shooter;
 import com.drillgon200.shooter.entity.Entity;
 
-public class SPacketRemoveEntity implements IMessage {
+public class SPacketRemoveEntity implements IMessageUDP {
 
 	short id;
 	
@@ -20,19 +19,19 @@ public class SPacketRemoveEntity implements IMessage {
 	}
 	
 	@Override
-	public void write(ByteBuffer buffer) {
-		buffer.putShort(id);
-	}
-
-	@Override
-	public void read(ByteBuffer buffer) {
-		id = buffer.getShort();
+	public boolean reliable() {
+		return true;
 	}
 	
-	public static class Handler implements IMessageHandler<SPacketRemoveEntity> {
+	@Override
+	public void serialize(Stream s) {
+		id = s.serializeShort(id);
+	}
+	
+	public static class Handler implements IMessageHandlerUDP<SPacketRemoveEntity> {
 
 		@Override
-		public void onMessage(SPacketRemoveEntity m, Connection c) {
+		public void onMessage(SPacketRemoveEntity m, MessageContext c) {
 			Shooter.addScheduledTask(() -> {
 				Entity e = Shooter.world.getEntityById(m.id);
 				if(e != null){

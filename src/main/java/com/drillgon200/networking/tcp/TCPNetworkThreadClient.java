@@ -1,26 +1,27 @@
-package com.drillgon200.networking;
+package com.drillgon200.networking.tcp;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Deque;
 
 import com.drillgon200.shooter.Shooter;
 import com.drillgon200.shooter.Shooter.ConnectionState;
 
-public class NetworkThreadClient extends Thread {
+public class TCPNetworkThreadClient extends Thread {
 
 	public volatile boolean shouldShutDown = false;
 	public InetAddress server;
 	public int port;
-	public volatile Connection serverConnection;
+	public volatile TCPConnection serverConnection;
 	long lastCommunicatedTime;
 	long currentTime;
 	
 	public Deque<String> log;
 	
-	public NetworkThreadClient() {
+	public TCPNetworkThreadClient() {
 		this.setName("Client Network Thread");
 	}
 	
@@ -44,7 +45,7 @@ public class NetworkThreadClient extends Thread {
 				}
 				if(serverConnection != null){
 					currentTime = System.currentTimeMillis();
-					if(currentTime - lastCommunicatedTime > NetworkManager.TIMEOUT){
+					if(currentTime - lastCommunicatedTime > TCPNetworkManager.TIMEOUT){
 						Shooter.state = ConnectionState.DISCONNECTING;
 						serverConnection.isClosed = true;
 						serverConnection.channel.close();
@@ -90,7 +91,7 @@ public class NetworkThreadClient extends Thread {
 		SocketChannel channel = SocketChannel.open();
 		channel.connect(new InetSocketAddress(server, port));
 		lastCommunicatedTime = System.currentTimeMillis();
-		Connection c = new Connection(channel);
+		TCPConnection c = new TCPConnection(channel);
 		channel.configureBlocking(false);
 		this.server = server;
 		this.port = port;

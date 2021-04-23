@@ -1,4 +1,4 @@
-package com.drillgon200.networking;
+package com.drillgon200.networking.tcp;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -13,17 +13,17 @@ import java.util.Deque;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class ConnectionAcceptorThread extends Thread {
+public class TCPConnectionAcceptorThread extends Thread {
 
 	public volatile boolean shouldShutDown = false;
 	public int port;
 	public ServerSocketChannel listener;
-	public Queue<Connection> connectionQueue;
+	public Queue<TCPConnection> connectionQueue;
 	public boolean local;
 	
 	public Deque<String> log;
 	
-	public ConnectionAcceptorThread(int port, boolean local, Queue<Connection> connectionQueue) {
+	public TCPConnectionAcceptorThread(int port, boolean local, Queue<TCPConnection> connectionQueue) {
 		this.connectionQueue = connectionQueue;
 		this.local = local;
 		this.setName((local ? "Local" : "Server") + " Connection Acceptor Thread");
@@ -53,7 +53,7 @@ public class ConnectionAcceptorThread extends Thread {
 				System.out.println("Accepting connection: " + channel);
 				if(log != null)
 					log.addLast("Accepting connection: " + channel);
-				connectionQueue.add(new Connection(channel));
+				connectionQueue.add(new TCPConnection(channel));
 			} catch(AsynchronousCloseException e){
 				//Eat it.
 				//I have literally no clue how to close this thing properly without exiting the program.

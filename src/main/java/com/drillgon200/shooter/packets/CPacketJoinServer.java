@@ -1,30 +1,30 @@
 package com.drillgon200.shooter.packets;
 
-import java.nio.ByteBuffer;
-
-import com.drillgon200.networking.Connection;
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.IMessageHandler;
+import com.drillgon200.networking.udp.IMessageHandlerUDP;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.MessageContext;
+import com.drillgon200.networking.udp.Stream;
 import com.drillgon200.shooter.ShooterServer;
 
-public class CPacketJoinServer implements IMessage {
+public class CPacketJoinServer implements IMessageUDP {
 
 	
 	public CPacketJoinServer() {
 	}
 	
 	@Override
-	public void write(ByteBuffer buffer) {
-	}
-
-	@Override
-	public void read(ByteBuffer buffer) {
+	public boolean reliable() {
+		return true;
 	}
 	
-	public static class Handler implements IMessageHandler<CPacketJoinServer> {
+	@Override
+	public void serialize(Stream s) {
+	}
+	
+	public static class Handler implements IMessageHandlerUDP<CPacketJoinServer> {
 
 		@Override
-		public void onMessage(CPacketJoinServer m, Connection c) {
+		public void onMessage(CPacketJoinServer m, MessageContext c) {
 			ShooterServer.addScheduledTask(() -> {
 				System.out.println("Trying player join!");
 				ShooterServer.tryJoinPlayer(c);

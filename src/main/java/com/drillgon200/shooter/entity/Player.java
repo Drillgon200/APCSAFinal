@@ -1,19 +1,17 @@
 package com.drillgon200.shooter.entity;
 
-import com.drillgon200.networking.Connection;
+import com.drillgon200.networking.udp.UDPConnection;
 import com.drillgon200.physics.CapsuleCollider;
 import com.drillgon200.physics.Collider;
 import com.drillgon200.physics.RigidBody;
-import com.drillgon200.physics.TriangleCollider;
 import com.drillgon200.shooter.Keybindings;
 import com.drillgon200.shooter.MainConfig;
 import com.drillgon200.shooter.World;
-import com.drillgon200.shooter.util.MathHelper;
 import com.drillgon200.shooter.util.Vec3f;
 
 public abstract class Player extends Entity {
 
-	public Connection connection;
+	public UDPConnection connection;
 	
 	public int input_moveForward;
 	public int input_moveStrafe;

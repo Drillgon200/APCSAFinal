@@ -3,7 +3,7 @@ package com.drillgon200.shooter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import com.drillgon200.networking.Connection;
+import com.drillgon200.networking.udp.UDPConnection;
 import com.drillgon200.shooter.entity.Entity;
 import com.drillgon200.shooter.entity.Player;
 import com.drillgon200.shooter.entity.PlayerServer;
@@ -29,18 +29,18 @@ public class WorldServer extends World {
 		ent.entityId = id;
 		if(ent instanceof PlayerServer){
 			PacketDispatcher.sendToAllExcept(new SPacketAddEntity(ent, "player_client_multiplayer"), (PlayerServer)ent);
-			((Player)ent).connection.sendPacket(new SPacketAddEntity(ent, "player_client"));
+			((Player)ent).connection.sendMessage(new SPacketAddEntity(ent, "player_client"));
 		} else {
 			PacketDispatcher.sendToAll(new SPacketAddEntity(ent));
 		}
 		return super.addEntity(ent);
 	}
 	
-	public void sendEntityAddPacket(Connection c, Entity ent){
+	public void sendEntityAddPacket(UDPConnection c, Entity ent){
 		if(ent instanceof PlayerServer){
-			c.sendPacket(new SPacketAddEntity(ent, "player_client_multiplayer"));
+			c.sendMessage(new SPacketAddEntity(ent, "player_client_multiplayer"));
 		} else {
-			c.sendPacket(new SPacketAddEntity(ent));
+			c.sendMessage(new SPacketAddEntity(ent));
 		}
 	}
 	

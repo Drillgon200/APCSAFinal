@@ -1,4 +1,4 @@
-package com.drillgon200.networking;
+package com.drillgon200.networking.tcp;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -10,18 +10,18 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
-public class NetworkThreadServer extends Thread {
+public class TCPNetworkThreadServer extends Thread {
 	
 	public volatile boolean shouldShutDown = false;
-	public Queue<Connection> inboundConnections;
-	public List<Connection> activeConnections = new ArrayList<>();
+	public Queue<TCPConnection> inboundConnections;
+	public List<TCPConnection> activeConnections = new ArrayList<>();
 	public Selector readSelector;
 	public Selector writeSelector;
 	long currentTime;
 	
 	public Deque<String> log;
 	
-	public NetworkThreadServer(Queue<Connection> inboundConnections) throws IOException {
+	public TCPNetworkThreadServer(Queue<TCPConnection> inboundConnections) throws IOException {
 		this.setName("Server Network Thread");
 		this.inboundConnections = inboundConnections;
 		readSelector = Selector.open();
@@ -51,10 +51,10 @@ public class NetworkThreadServer extends Thread {
 				acceptNewConnections();
 				readFromConnections();
 				writeToConnections();
-				Iterator<Connection> itr = activeConnections.iterator();
+				Iterator<TCPConnection> itr = activeConnections.iterator();
 				while(itr.hasNext()){
-					Connection c = itr.next();
-					if(currentTime - c.lastCommunicatedTime > NetworkManager.TIMEOUT || !c.channel.isConnected()){
+					TCPConnection c = itr.next();
+					if(currentTime - c.lastCommunicatedTime > TCPNetworkManager.TIMEOUT || !c.channel.isConnected()){
 						itr.remove();
 						c.isClosed = true;
 						try {
@@ -74,7 +74,7 @@ public class NetworkThreadServer extends Thread {
 		closeAll();
 	}
 	
-	public void closeConnection(Connection c){
+	public void closeConnection(TCPConnection c){
 		c.isClosed = true;
 		try {
 			c.channel.close();
@@ -85,7 +85,7 @@ public class NetworkThreadServer extends Thread {
 	}
 	
 	public void closeAll(){
-		for(Connection c : activeConnections){
+		for(TCPConnection c : activeConnections){
 			c.isClosed = true;
 			try {
 				c.channel.close();
@@ -97,7 +97,7 @@ public class NetworkThreadServer extends Thread {
 	}
 	
 	private void acceptNewConnections() throws IOException {
-		Connection inSocket;
+		TCPConnection inSocket;
 		while((inSocket = inboundConnections.poll()) != null){
 			inSocket.channel.configureBlocking(false);
 			
@@ -125,7 +125,7 @@ public class NetworkThreadServer extends Thread {
 	}
 	
 	private void readConnection(SelectionKey key) throws IOException {
-		Connection c = (Connection) key.attachment();
+		TCPConnection c = (TCPConnection) key.attachment();
 		c.lastCommunicatedTime = currentTime;
 		try {
 			c.reader.read(c);
@@ -159,7 +159,7 @@ public class NetworkThreadServer extends Thread {
 	}
 	
 	private void writeConnection(SelectionKey key) throws IOException {
-		Connection c = (Connection) key.attachment();
+		TCPConnection c = (TCPConnection) key.attachment();
 		try {
 			c.writer.write(c);
 		} catch(IOException e){

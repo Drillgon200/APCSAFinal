@@ -1,27 +1,27 @@
-package com.drillgon200.networking;
+package com.drillgon200.networking.tcp;
 
 import java.io.IOException;
 import java.util.Deque;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class NetServer {
+public class TCPNetServer {
 
-	public ConnectionAcceptorThread acceptor = null;
-	public ConnectionAcceptorThread localAcceptor = null;
-	public NetworkThreadServer netThread = null;
+	public TCPConnectionAcceptorThread acceptor = null;
+	public TCPConnectionAcceptorThread localAcceptor = null;
+	public TCPNetworkThreadServer netThread = null;
 	public int port;
 	
-	public NetServer(int port) {
+	public TCPNetServer(int port) {
 		this.port = port;
 	}
 	
 	public void start(Deque<String> log){
 		try {
-			Queue<Connection> connectionQueue = new ArrayBlockingQueue<>(32);
-			this.acceptor = new ConnectionAcceptorThread(port, false, connectionQueue);
-			this.localAcceptor = new ConnectionAcceptorThread(port, true, connectionQueue);
-			this.netThread = new NetworkThreadServer(connectionQueue);
+			Queue<TCPConnection> connectionQueue = new ArrayBlockingQueue<>(32);
+			this.acceptor = new TCPConnectionAcceptorThread(port, false, connectionQueue);
+			this.localAcceptor = new TCPConnectionAcceptorThread(port, true, connectionQueue);
+			this.netThread = new TCPNetworkThreadServer(connectionQueue);
 			acceptor.setLog(log);
 			localAcceptor.setLog(log);
 			netThread.setLog(log);

@@ -1,19 +1,64 @@
 package com.drillgon200.shooter;
 
-import com.drillgon200.networking.NetServer;
+import java.net.InetAddress;
+
+import com.drillgon200.networking.udp.PacketClientServerTest;
+import com.drillgon200.networking.udp.PacketServerClientTest;
+import com.drillgon200.networking.udp.PacketTest;
+import com.drillgon200.networking.udp.UDPNetworkManager;
+import com.drillgon200.networking.udp.UDPNetworkThreadClient;
+import com.drillgon200.networking.udp.UDPNetworkThreadServer;
 
 public class Main {
 	
 	public static void main(String[] args) throws Exception {
+		/*ByteBuffer buf = ByteBuffer.allocate(16);
+		WriteStream ws = new WriteStream(new BitWriter(buf));
+		ReadStream rs = new ReadStream(new BitReader(buf));
+		ws.serializeShort((short) 1);
+		ws.serializeBits(1, 8);
+		ws.serializeByte((byte) 5);
+		ws.finish();
+		buf.flip();*/
+		//System.out.println(rs.seria)
+		
+		
+		/*UDPNetworkManager.registerPacket(PacketTest.class, PacketTest.Handler.class, Side.SERVER);
+		UDPNetworkManager.registerPacket(PacketClientServerTest.class, PacketClientServerTest.Handler.class, Side.SERVER);
+		UDPNetworkManager.registerPacket(PacketServerClientTest.class, PacketServerClientTest.Handler.class, Side.CLIENT);
+		UDPNetworkThreadServer serv = new UDPNetworkThreadServer(12345);
+		serv.start();
+		UDPNetworkThreadClient cli = new UDPNetworkThreadClient();
+		cli.start();
+		cli.connect(InetAddress.getLoopbackAddress(), 12345);
+		cli.sendMessage(new PacketTest("bruh0", 150));
+		cli.sendMessage(new PacketTest("bruh1", 1500));
+		cli.sendMessage(new PacketTest("bruh2", 150));
+		cli.sendMessage(new PacketTest("bruh3", 150));
+		cli.sendMessage(new PacketTest("bruh4", 150));
+		cli.sendMessage(new PacketTest("bruh5", 150));
+		long time = System.currentTimeMillis();
+		while(System.currentTimeMillis()-time < 5000){
+		}
+		serv.terminate();
+		cli.terminate();
+		serv.join();
+		cli.join();
+		if(true)
+			return;*/
+		
+		
 		//NetworkManager.registerPacket(CPacketJoinServer.class, CPacketJoinServer.Handler.class, 0, Side.SERVER);
 		if(args.length > 0 && args.length > 0 && args[0].equals("server")){
 			System.out.println("Starting server...");
-			NetServer s = new NetServer(46655);
-			s.start(null);
+			int port = getPortFromString(args.length > 1 ? args[1] : "", 46655);
+			if(port == -1)
+				return;
+			ShooterServer.start_async(null, port);
 			Runtime.getRuntime().addShutdownHook(new Thread(){
 				@Override
 				public void run() {
-					s.shutdown();
+					ShooterServer.shutdown_async(null);
 					System.out.println("Stopping server...");
 				}
 			});
@@ -87,5 +132,26 @@ public class Main {
 		Shooter.shutdown();
 		System.out.println("Exited game.");
 	}
+	
+	private static int getPortFromString(String text, int def){
+		int port;
+		if(text.isEmpty()){
+			port = def;
+		} else {
+			try {
+				port = Integer.parseInt(text);
+			} catch(NumberFormatException e){
+				System.out.println("Port not a number!");
+				return -1;
+			}
+			//According to google, 1024 and below are reserved and 65535 is the default max on windows
+			if(port < 1024 || port > 65535){
+				System.out.println("Port out of range! Must be between 1024 and 65535.");
+				return -1;
+			}
+		}
+		return port;
+	}
+	
 	
 }

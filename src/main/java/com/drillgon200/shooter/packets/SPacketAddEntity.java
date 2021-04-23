@@ -1,17 +1,18 @@
 package com.drillgon200.shooter.packets;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
-import com.drillgon200.networking.Connection;
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.IMessageHandler;
+import com.drillgon200.networking.udp.IMessageHandlerUDP;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.MessageContext;
+import com.drillgon200.networking.udp.Stream;
 import com.drillgon200.shooter.Shooter;
 import com.drillgon200.shooter.ShooterServer;
 import com.drillgon200.shooter.entity.Entity;
-import com.drillgon200.shooter.entity.EntityRegistry;
 import com.drillgon200.shooter.util.Vec3f;
 
-public class SPacketAddEntity implements IMessage {
+public class SPacketAddEntity implements IMessageUDP {
 
 	public String entName;
 	public short entId;
@@ -41,28 +42,35 @@ public class SPacketAddEntity implements IMessage {
 	}
 	
 	@Override
-	public void write(ByteBuffer buffer) {
-		byte[] bytes = entName.getBytes();
-		buffer.putInt(bytes.length);
-		for(byte b : bytes){
-			buffer.put(b);
-		}
-		buffer.putShort(entId);
-	}
-
-	@Override
-	public void read(ByteBuffer buffer) {
-		int len = buffer.getInt();
-		byte[] bytes = new byte[len];
-		buffer.get(bytes);
-		entName = new String(bytes);
-		entId = buffer.getShort();
+	public boolean reliable() {
+		return true;
 	}
 	
-	public static class Handler implements IMessageHandler<SPacketAddEntity> {
+	@Override
+	public void serialize(Stream s) {
+		byte[] bytes;
+		if(s.isWriting()){
+			bytes = entName.getBytes(Charset.forName("ascii"));
+			s.serializeBits(bytes.length, 8);
+		} else {
+			bytes = new byte[s.serializeBits(0, 8)];
+		}
+		for(int i = 0; i < bytes.length; i ++){
+			bytes[i] = s.serializeByte(bytes[i]);
+		}
+		if(!s.isWriting()){
+			entName = new String(bytes, Charset.forName("ascii"));
+		}
+		entId = s.serializeShort(entId);
+		x = s.serializeFloat(x);
+		y = s.serializeFloat(y);
+		z = s.serializeFloat(z);
+	}
+	
+	public static class Handler implements IMessageHandlerUDP<SPacketAddEntity> {
 
 		@Override
-		public void onMessage(SPacketAddEntity m, Connection c) {
+		public void onMessage(SPacketAddEntity m, MessageContext c) {
 			Shooter.addScheduledTask(() -> {
 				Entity ent = Shooter.entityRegistry.constructEntity(m.entName, Shooter.world);
 				ent.entityId = m.entId;

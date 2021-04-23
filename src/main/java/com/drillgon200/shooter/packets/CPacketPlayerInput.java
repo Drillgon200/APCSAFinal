@@ -1,16 +1,15 @@
 package com.drillgon200.shooter.packets;
 
-import java.nio.ByteBuffer;
-
-import com.drillgon200.networking.Connection;
-import com.drillgon200.networking.IMessage;
-import com.drillgon200.networking.IMessageHandler;
+import com.drillgon200.networking.udp.IMessageHandlerUDP;
+import com.drillgon200.networking.udp.IMessageUDP;
+import com.drillgon200.networking.udp.MessageContext;
+import com.drillgon200.networking.udp.Stream;
 import com.drillgon200.shooter.ShooterServer;
 import com.drillgon200.shooter.entity.PlayerClient;
 import com.drillgon200.shooter.entity.PlayerServer;
 import com.drillgon200.shooter.util.Vec3f;
 
-public class CPacketPlayerInput implements IMessage {
+public class CPacketPlayerInput implements IMessageUDP {
 
 	public float posX;
 	public float posY;
@@ -27,30 +26,23 @@ public class CPacketPlayerInput implements IMessage {
 	}
 	
 	@Override
-	public void write(ByteBuffer buffer) {
-		buffer.putFloat(posX);
-		buffer.putFloat(posY);
-		buffer.putFloat(posZ);
-	}
-
-	@Override
-	public void read(ByteBuffer buffer) {
-		posX = buffer.getFloat();
-		posY = buffer.getFloat();
-		posZ = buffer.getFloat();
+	public boolean reliable() {
+		return false;
 	}
 	
-	public static class Handler implements IMessageHandler<CPacketPlayerInput> {
+	@Override
+	public void serialize(Stream s) {
+		posX = s.serializeFloat(posX);
+		posY = s.serializeFloat(posY);
+		posZ = s.serializeFloat(posZ);
+	}
+	
+	public static class Handler implements IMessageHandlerUDP<CPacketPlayerInput> {
 
 		@Override
-		public void onMessage(CPacketPlayerInput m, Connection c) {
+		public void onMessage(CPacketPlayerInput m, MessageContext c) {
 			ShooterServer.addScheduledTask(() -> {
-				for(PlayerServer p : ShooterServer.players){
-					if(p.connection == c){
-						p.setPos(m.posX, m.posY, m.posZ);
-						return;
-					}
-				}
+				c.connection.player.setPos(m.posX, m.posY, m.posZ);
 			});
 		}
 		
